@@ -1,3 +1,4 @@
+import GitHubIcon from "./components/GitHubIcon";
 import About from "./components/About";
 import { SOURCE_URL, STARRY_URL } from "./lib/project";
 import BrandIcon from "./components/BrandIcon";
@@ -1340,6 +1341,7 @@ export default function App() {
                     target="_blank"
                     rel="noreferrer"
                   >
+                    <GitHubIcon />
                     {t("GitHub repository")}
                   </a>
                 </section>

@@ -1,3 +1,4 @@
+import GitHubIcon from "./GitHubIcon";
 import BrandIcon from "./BrandIcon";
 import { SOURCE_URL, STARRY_URL } from "../lib/project";
 export default function About({ t }: { t: (text: string) => string }) {
@@ -48,6 +49,7 @@ export default function About({ t }: { t: (text: string) => string }) {
           target="_blank"
           rel="noreferrer"
         >
+          <GitHubIcon />
           {t("GitHub repository")}
         </a>
       </div>
