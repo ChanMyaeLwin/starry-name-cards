@@ -36,10 +36,12 @@ export default function MessageDialog({
         close(false);
       }}
     >
-      <BrandIcon size={48} />
-      <h2 id={`${id}-title`}>
-        {t(labels.title || (onDismiss ? "Please confirm" : "Notice"))}
-      </h2>
+      <div className="popup-heading">
+        <BrandIcon size={44} />
+        <h2 id={`${id}-title`}>
+          {t(labels.title || (onDismiss ? "Please confirm" : "Notice"))}
+        </h2>
+      </div>
       <p id={`${id}-body`}>{t(message)}</p>
       <div className="button-row">
         {onDismiss && (

@@ -1661,9 +1661,12 @@ export default function App() {
             aria-labelledby="ocr-download-title"
             aria-describedby="ocr-download-description"
           >
-            <h2 id="ocr-download-title">
-              {t("Download OCR to read this card")}
-            </h2>
+            <div className="popup-heading">
+              <BrandIcon size={44} />
+              <h2 id="ocr-download-title">
+                {t("Download OCR to read this card")}
+              </h2>
+            </div>
             <p id="ocr-download-description">
               {t(
                 "English and Myanmar OCR files are needed. Download English and Myanmar together to read cards on this device. Your photo stays on your device.",
@@ -1743,7 +1746,10 @@ export default function App() {
             aria-modal="true"
             aria-labelledby="duplicate-title"
           >
-            <h2 id="duplicate-title">{t("A familiar connection?")}</h2>
+            <div className="popup-heading">
+              <BrandIcon size={44} />
+              <h2 id="duplicate-title">{t("A familiar connection?")}</h2>
+            </div>
             <p>
               {t(
                 "A phone number or email matches an existing card. Nothing has been overwritten.",
@@ -1838,7 +1844,10 @@ export default function App() {
             aria-modal="true"
             aria-labelledby="restore-title"
           >
-            <h2 id="restore-title">Restore {imported.length} cards?</h2>
+            <div className="popup-heading">
+              <BrandIcon size={44} />
+              <h2 id="restore-title">Restore {imported.length} cards?</h2>
+            </div>
             <p>
               {t(
                 "Existing cards remain. Possible duplicates will be reviewed before import.",
@@ -1866,7 +1875,10 @@ export default function App() {
             aria-modal="true"
             aria-labelledby="crop-title"
           >
-            <h2 id="crop-title">{t("Crop card")}</h2>
+            <div className="popup-heading">
+              <BrandIcon size={44} />
+              <h2 id="crop-title">{t("Crop card")}</h2>
+            </div>
             <div className="crop-preview">
               <img src={images[cropIndex]} alt="Crop preview" />
               <div

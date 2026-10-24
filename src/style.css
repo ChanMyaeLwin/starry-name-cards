@@ -1518,3 +1518,15 @@ html {
     padding: 0 5%;
   }
 }
+
+.popup-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.popup-heading h2 {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
