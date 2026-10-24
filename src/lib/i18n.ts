@@ -312,3 +312,7 @@ Object.assign(translations, {
   "GitHub repository": "GitHub ကုဒ်သိုလှောင်ရာ",
   "Source code & contributions": "မူရင်းကုဒ်နှင့် ပါဝင်ကူညီမှုများ",
 });
+
+Object.assign(translations, {
+  "Backup & export": "အရန်သိမ်းဆည်းခြင်းနှင့် ထုတ်ယူခြင်း",
+});

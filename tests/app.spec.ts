@@ -54,6 +54,15 @@ test("manual contact persists, edits, exports, backs up, restores and deletes", 
   await page.removeLocatorHandler(
     page.getByRole("dialog", { name: "Please confirm" }),
   );
+  await expect(
+    page.getByRole("button", { name: "Export JSON backup" }),
+  ).toHaveCount(0);
+  await page.getByRole("link", { name: "More", exact: true }).click();
+  const allContacts = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Export all contacts", exact: true })
+    .click();
+  expect((await allContacts).suggestedFilename()).toBe("starry-contacts.vcf");
   const backupEvent = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export JSON backup" }).click();
   await page
@@ -66,6 +75,7 @@ test("manual contact persists, edits, exports, backs up, restores and deletes", 
     .click();
   const backup = await backupEvent;
   const path = await backup.path();
+  await page.getByRole("link", { name: "Connections", exact: true }).click();
   await page.getByRole("button", { name: "Delete Alex Updated" }).click();
   await page
     .getByRole("dialog", { name: "Please confirm" })
@@ -74,10 +84,21 @@ test("manual contact persists, edits, exports, backs up, restores and deletes", 
   await expect(
     page.getByText("Your next connection starts here."),
   ).toBeVisible();
+  await page.getByRole("link", { name: "More", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Export all contacts", exact: true }),
+  ).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: "Export JSON backup" }),
+  ).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: "Restore backup", exact: true }),
+  ).toBeEnabled();
   await page.locator("input[type=file]").setInputFiles(path!);
   await page
     .getByRole("button", { name: "Restore cards", exact: true })
     .click();
+  await page.getByRole("link", { name: "Connections", exact: true }).click();
   await expect(page.getByText("Alex Updated", { exact: true })).toBeVisible();
 });
 test("download/share does not save and unsafe text remains text", async ({

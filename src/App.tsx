@@ -1206,69 +1206,6 @@ export default function App() {
                     ))}
                   </div>
                 )}
-                <div className="button-row export-row">
-                  <button
-                    disabled={!cards.length}
-                    onClick={async () => {
-                      try {
-                        download(
-                          await exportVCardsAsync(cards),
-                          "starry-contacts.vcf",
-                        );
-                      } catch (e) {
-                        setMessage((e as Error).message);
-                      }
-                    }}
-                  >
-                    <Download size={17} />
-                    {t("Export all contacts")}
-                  </button>
-                  <button
-                    disabled={!cards.length}
-                    onClick={async () => {
-                      if (
-                        await confirmation.ask(
-                          "This JSON backup is unencrypted and contains contact details. Continue?",
-                        )
-                      ) {
-                        const include = await confirmation.ask(
-                          "Include retained card photos in this backup? Cancel exports contact data only.",
-                        );
-                        try {
-                          download(
-                            await createBackupAsync(cards, include),
-                            "starry-backup.json",
-                            "application/json",
-                          );
-                        } catch (e) {
-                          setMessage((e as Error).message);
-                        }
-                      }
-                    }}
-                  >
-                    <FileText size={17} />
-                    {t("Export JSON backup")}
-                  </button>
-                  <button onClick={() => importRef.current?.click()}>
-                    <Upload size={17} />
-                    {t("Restore backup")}
-                  </button>
-                  <input
-                    hidden
-                    ref={importRef}
-                    type="file"
-                    accept=".json,application/json"
-                    onChange={(e) => {
-                      void importFile(e.target.files?.[0]);
-                      e.target.value = "";
-                    }}
-                  />
-                </div>
-                <small>
-                  {t(
-                    "VCF exports contacts. JSON backups restore your app collection.",
-                  )}
-                </small>
               </section>
             )}
             {page === "more" && (
@@ -1327,6 +1264,72 @@ export default function App() {
                     </a>
                   ))}
                 </div>
+                <section className="settings-card">
+                  <h2>{t("Backup & export")}</h2>
+                  <div className="button-row export-row">
+                    <button
+                      disabled={!cards.length}
+                      onClick={async () => {
+                        try {
+                          download(
+                            await exportVCardsAsync(cards),
+                            "starry-contacts.vcf",
+                          );
+                        } catch (e) {
+                          setMessage((e as Error).message);
+                        }
+                      }}
+                    >
+                      <Download size={17} />
+                      {t("Export all contacts")}
+                    </button>
+                    <button
+                      disabled={!cards.length}
+                      onClick={async () => {
+                        if (
+                          await confirmation.ask(
+                            "This JSON backup is unencrypted and contains contact details. Continue?",
+                          )
+                        ) {
+                          const include = await confirmation.ask(
+                            "Include retained card photos in this backup? Cancel exports contact data only.",
+                          );
+                          try {
+                            download(
+                              await createBackupAsync(cards, include),
+                              "starry-backup.json",
+                              "application/json",
+                            );
+                          } catch (e) {
+                            setMessage((e as Error).message);
+                          }
+                        }
+                      }}
+                    >
+                      <FileText size={17} />
+                      {t("Export JSON backup")}
+                    </button>
+                    <button onClick={() => importRef.current?.click()}>
+                      <Upload size={17} />
+                      {t("Restore backup")}
+                    </button>
+                    <input
+                      hidden
+                      ref={importRef}
+                      type="file"
+                      accept=".json,application/json"
+                      onChange={(e) => {
+                        void importFile(e.target.files?.[0]);
+                        e.target.value = "";
+                      }}
+                    />
+                  </div>
+                  <small>
+                    {t(
+                      "VCF exports contacts. JSON backups restore your app collection.",
+                    )}
+                  </small>
+                </section>
                 <InstallCard installation={installation} t={t} />
                 <section className="settings-card">
                   <h2>{t("Source code & contributions")}</h2>
