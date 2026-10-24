@@ -53,6 +53,8 @@ npm run setup:ocr
 npm run build
 ```
 
+Run `npm run preview` to inspect the production build locally, including service-worker/offline behavior. The development server intentionally does not register a service worker.
+
 Deploy the entire `dist/` directory, including OCR assets, manifest, service worker, and notices, to a static HTTPS host. Localhost also supports service-worker development. No application server or API key is needed. Serve WASM as `application/wasm`; do not rewrite asset requests to HTML. Use revalidation/no-cache for the service worker and entry HTML so update checks work. Preserve the document Content Security Policy; review any host header policy against local worker/WASM execution.
 
 For hosting under a subdirectory, set the build base including trailing slash:
