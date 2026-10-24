@@ -1068,3 +1068,257 @@ html[lang="my"] .action-bottom h2 {
 html[lang="my"] .action-card {
   height: 310px;
 }
+/* App shell: persistent destinations, safe-area support and compact settings. */
+.app {
+  padding-bottom: 104px;
+  min-height: 100dvh;
+}
+.app-nav {
+  position: fixed;
+  z-index: 10;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  width: min(560px, calc(100% - 40px));
+  padding: 8px;
+  border: 1px solid #e1e6f1;
+  border-radius: 22px;
+  background: #ffffffed;
+  backdrop-filter: blur(18px);
+  box-shadow: 0 8px 35px #18254016;
+}
+.app-nav a {
+  min-height: 57px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  color: #68758e;
+  text-decoration: none;
+  font-size: 11px;
+  font-weight: 550;
+  border-radius: 14px;
+}
+.app-nav a[aria-current="page"] {
+  color: var(--blue);
+  background: #edf2ff;
+}
+.app-nav a:hover {
+  background: #f2f5fc;
+}
+.app-attribution {
+  justify-content: center;
+  border: 0;
+  margin-top: 20px;
+}
+.page-intro {
+  margin-bottom: 25px;
+}
+.page-intro h1 {
+  margin-bottom: 7px;
+}
+.page-intro p {
+  margin: 0;
+}
+.page-intro .eyebrow {
+  margin-bottom: 12px;
+}
+.settings-page,
+.more-page,
+.profile-page {
+  max-width: 720px;
+}
+.settings-card {
+  padding: 24px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  margin-bottom: 18px;
+  box-shadow: 0 3px 10px #223b6610;
+}
+.settings-card h2,
+.prose .settings-card h2 {
+  font-size: 18px;
+  margin: 0 0 12px;
+  letter-spacing: -0.3px;
+}
+.settings-card p {
+  font-size: 13px;
+  line-height: 1.65;
+}
+.settings-card p:last-child {
+  margin-bottom: 0;
+}
+.settings-card select {
+  max-width: none;
+}
+.settings-card > button {
+  margin: 5px 8px 10px 0;
+}
+.menu-list {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  overflow: hidden;
+  margin-bottom: 22px;
+}
+.menu-list > a {
+  padding: 19px 20px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  text-decoration: none;
+  color: inherit;
+  border-bottom: 1px solid #edf0f6;
+  min-height: 84px;
+}
+.menu-list > a:last-child {
+  border-bottom: 0;
+}
+.menu-list > a:hover {
+  background: #f8faff;
+}
+.menu-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 13px;
+  background: #eef3ff;
+  display: grid;
+  place-items: center;
+  color: var(--blue);
+  flex-shrink: 0;
+}
+.menu-list > a > span:nth-child(2) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.menu-list strong {
+  font-size: 15px;
+  font-weight: 600;
+}
+.menu-list small {
+  font-size: 12px;
+}
+.menu-list > a > svg {
+  color: #8996ac;
+}
+.profile-avatar {
+  display: grid;
+  place-items: center;
+  background: #eaf0ff;
+  color: var(--blue);
+  height: 72px;
+  width: 72px;
+  border-radius: 23px;
+  margin-bottom: 18px;
+}
+.profile-note {
+  font-size: 12px !important;
+  padding: 0 8px;
+}
+.form-status {
+  margin: 12px 0 0;
+}
+.back {
+  margin-top: 18px;
+  min-height: 38px;
+  font-size: 13px;
+}
+.install-guide {
+  background: #f2f5ff;
+}
+.hero {
+  padding-top: 45px;
+}
+.steps {
+  padding-bottom: 15px;
+  margin-top: 26px;
+}
+@media (max-width: 700px) {
+  .app {
+    padding-bottom: calc(90px + env(safe-area-inset-bottom));
+  }
+  .header {
+    height: 72px;
+  }
+  .header .brand-mark {
+    padding: 8px;
+  }
+  .app-nav {
+    bottom: 0;
+    left: 0;
+    transform: none;
+    width: 100%;
+    border-radius: 20px 20px 0 0;
+    padding: 7px 12px calc(7px + env(safe-area-inset-bottom));
+    border-bottom: 0;
+    box-shadow: 0 -4px 24px #18254009;
+  }
+  .app-nav a {
+    min-height: 56px;
+    font-size: 11px;
+  }
+  .panel {
+    margin-top: 18px;
+    margin-bottom: 28px;
+  }
+  .panel h1 {
+    font-size: 29px;
+  }
+  .settings-card {
+    padding: 20px;
+    border-radius: 16px;
+    margin-bottom: 14px;
+  }
+  .settings-card > button {
+    max-width: 100%;
+    white-space: normal;
+    text-align: left;
+    font-size: 13px;
+  }
+  .settings-page .primary {
+    width: 100%;
+    justify-content: center;
+    margin-right: 0;
+  }
+  .page-intro {
+    margin-bottom: 20px;
+  }
+  .app-attribution {
+    padding: 12px 0;
+    margin-top: 10px;
+    font-size: 9px;
+  }
+  .hero {
+    padding-top: 32px;
+  }
+  .hero h1 {
+    font-size: 34px;
+  }
+  .actions .action-card {
+    height: 196px;
+  }
+  .card-illustration,
+  .collection-illustration {
+    top: 36px;
+    transform: scale(0.75);
+  }
+  .action-bottom h2 {
+    font-size: 19px;
+  }
+  .privacy-strip {
+    margin-top: 20px;
+  }
+  .steps {
+    display: none;
+  }
+  .menu-list > a {
+    padding: 17px;
+    min-height: 80px;
+  }
+}

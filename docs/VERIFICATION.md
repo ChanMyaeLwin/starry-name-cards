@@ -11,7 +11,7 @@ Date: 24 October 2026. Environment: macOS ARM64, Node.js 22.21.1, Playwright 1.6
 | `npm run format:check` | Passed |
 | `npm test` | 28 tests passed across five files |
 | `npm run build` | Passed; static output in `dist/` |
-| `npm run test:e2e` | Six browser scenarios passed |
+| `npm run test:e2e` | Seven browser scenarios passed |
 | `npm run test:subpath` | Passed at `/name-cards/`; offline launch, asset preparation and local save |
 | `npm audit` | Zero known vulnerabilities reported at verification time |
 
@@ -42,3 +42,7 @@ See `QA_CHECKLIST.md` for the device checklist. No public deployment or remote r
 - [Tesseract.js local installation](https://github.com/naptha/tesseract.js/blob/master/docs/local-installation.md)
 - [Pinned tessdata_fast model source](https://github.com/tesseract-ocr/tessdata_fast/tree/87416418657359cb625c412a48b6e1d6d41c29bd)
 - [vCard 3.0 specification, RFC 2426](https://www.rfc-editor.org/rfc/rfc2426)
+
+## Mobile navigation update
+
+Added persistent Home / Connections / Settings / More navigation, compact settings cards, local profile storage and distinct hash routes. Browser coverage includes route reload, back/forward, profile persistence, saved-connection deep links, privacy deep links, active navigation and mobile overflow. Profile information is local-only and excluded from contact backups.

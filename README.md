@@ -30,6 +30,12 @@ npm run test:subpath
 
 See the [verification report](docs/VERIFICATION.md) for executed checks and [manual verification](docs/QA_CHECKLIST.md) for pending physical-device checks.
 
+## App navigation
+
+The persistent app navigation contains **Home**, **Connections**, **Settings**, and **More**. More contains Profile, Privacy, Settings, Help and installation guidance. The optional local profile needs no account and is excluded from contact backups.
+
+Each screen has a distinct URL: `/#/home`, `/#/connections`, `/#/settings`, `/#/more`, `/#/profile`, `/#/privacy`, `/#/help`, `/#/scan` and `/#/review`. Saved connections use `/#/connections/<local-id>`. Hash routes support direct opening, reloads and browser back/forward without static-host rewrite rules, including under a subdirectory and offline. URLs never contain contact details. Unsaved review drafts are not restored after a reload.
+
 ## Use
 
 1. Choose **Scan a Name Card** and take or choose a photo, or enter details manually.

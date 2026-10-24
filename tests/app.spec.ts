@@ -16,12 +16,11 @@ test("manual contact persists, edits, exports, backs up, restores and deletes", 
   await expect(
     page.getByText("Your next connection starts here."),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Home", exact: true }).click();
+  await page.getByRole("link", { name: "Home", exact: true }).click();
   await manual(page);
   await page.getByRole("button", { name: "Save to My Name Cards" }).click();
   await expect(page.getByText("Alex Example", { exact: true })).toBeVisible();
   await page.reload();
-  await page.getByRole("button", { name: "My Name Cards" }).click();
   await page.getByRole("button", { name: /^AL Alex Example/ }).click();
   await page.getByLabel("Full name", { exact: true }).fill("Alex Updated");
   await page.getByText("Contact QR code", { exact: true }).click();
@@ -68,7 +67,8 @@ test("download/share does not save and unsafe text remains text", async ({
   await dl;
   await expect(page.getByText("File sharing is unavailable.")).toBeVisible();
   page.on("dialog", (d) => d.accept());
-  await page.getByRole("button", { name: "Home", exact: true }).click();
+  await page.getByRole("link", { name: "Home", exact: true }).click();
+  await page.getByRole("link", { name: "Connections", exact: true }).click();
   await expect(
     page.getByText("Your next connection starts here."),
   ).toBeVisible();
@@ -91,15 +91,17 @@ test("real local OCR offline and missing pack fallback", async ({
     await navigator.serviceWorker.ready;
   });
   await page.reload();
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Download / verify offline assets" })
-    .click();
+  await page.getByRole("link", { name: "Settings", exact: true }).click();
+  await page.getByRole("button", { name: "Download for offline use" }).click();
   await expect(
-    page.getByText("Selected OCR assets installed.", { exact: false }),
+    page.getByText("Language downloaded.", { exact: false }),
   ).toBeVisible({ timeout: 60000 });
   await context.setOffline(true);
   await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "Settings", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("link", { name: "Home", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: /Your next connection/ }),
   ).toBeVisible();
@@ -222,7 +224,7 @@ test("duplicate email requires an explicit choice", async ({ page }) => {
   await page.getByRole("button", { name: "Add email" }).click();
   await page.getByLabel("emails 1", { exact: true }).fill("shared@example.com");
   await page.getByRole("button", { name: "Save to My Name Cards" }).click();
-  await page.getByRole("button", { name: "Home", exact: true }).click();
+  await page.getByRole("link", { name: "Home", exact: true }).click();
   await manual(page, "Second Example");
   await page.getByRole("button", { name: "Add email" }).click();
   await page.getByLabel("emails 1", { exact: true }).fill("SHARED@example.com");
@@ -233,4 +235,75 @@ test("duplicate email requires an explicit choice", async ({ page }) => {
   await page.getByRole("button", { name: "Save separately" }).click();
   await expect(page.getByText("Second Example", { exact: true })).toBeVisible();
   await expect(page.getByText("First Example", { exact: true })).toBeVisible();
+});
+test("app navigation has distinct URLs, history, local profile and reloadable connections", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  const nav = page.getByRole("navigation", { name: "Main navigation" });
+  await nav.getByRole("link", { name: "Settings", exact: true }).click();
+  await expect(page).toHaveURL(/#\/settings$/);
+  await expect(nav.getByRole("link", { name: "Settings" })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "Settings", exact: true }),
+  ).toBeVisible();
+  await nav.getByRole("link", { name: "More", exact: true }).click();
+  await expect(page).toHaveURL(/#\/more$/);
+  await page.getByRole("link", { name: /Profile Your details/ }).click();
+  await expect(page).toHaveURL(/#\/profile$/);
+  await page.getByLabel("Display name").fill("Local Example");
+  await page.getByLabel("About you").fill("Community volunteer");
+  await page.getByRole("button", { name: "Save profile" }).click();
+  await page.reload();
+  await expect(page.getByLabel("Display name")).toHaveValue("Local Example");
+  await page.goBack();
+  await expect(
+    page.getByRole("heading", { name: "More", exact: true }),
+  ).toBeVisible();
+  await page.goForward();
+  await expect(
+    page.getByRole("heading", { name: "Your profile" }),
+  ).toBeVisible();
+  await nav.getByRole("link", { name: "Home", exact: true }).click();
+  await manual(page, "Routing Example");
+  await page.getByRole("button", { name: "Save to My Name Cards" }).click();
+  await expect(page).toHaveURL(/#\/connections$/);
+  await page.getByRole("button", { name: /^RO Routing Example/ }).click();
+  await expect(page).toHaveURL(/#\/connections\/[a-z0-9-]+$/);
+  page.on("dialog", (d) => d.accept());
+  await page.reload();
+  await expect(page.getByLabel("Full name", { exact: true })).toHaveValue(
+    "Routing Example",
+  );
+  await nav.getByRole("link", { name: "More" }).click();
+  await page.getByRole("link", { name: /Privacy Your data/ }).click();
+  await expect(page).toHaveURL(/#\/privacy$/);
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "Your connections. Your privacy." }),
+  ).toBeVisible();
+  await page.screenshot({
+    path: "test-results/privacy-mobile.png",
+    fullPage: true,
+  });
+  await nav.getByRole("link", { name: "Settings" }).click();
+  await page.screenshot({
+    path: "test-results/settings-mobile.png",
+    fullPage: true,
+  });
+  await nav.getByRole("link", { name: "More" }).click();
+  await page.screenshot({
+    path: "test-results/more-mobile.png",
+    fullPage: true,
+  });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
 });

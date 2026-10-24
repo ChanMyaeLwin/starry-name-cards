@@ -1,3 +1,6 @@
+import AppNav from "./components/AppNav";
+import Profile, { PROFILE_KEY } from "./components/Profile";
+import { readRoute, routeURL, type Page } from "./lib/routes";
 import * as offlineTools from "./lib/offline";
 import Home from "./components/Home";
 import { useEffect, useRef, useState } from "react";
@@ -21,6 +24,10 @@ import {
   FileText,
   Share2,
   QrCode,
+  UserRound,
+  Settings as SettingsIcon,
+  ChevronRight,
+  CircleHelp,
 } from "lucide-react";
 import {
   emptyContact,
@@ -41,8 +48,6 @@ import { translations } from "./lib/i18n";
 import { processImage, transformImage } from "./lib/images";
 import { recognizeImages, cancelOCR } from "./lib/ocr";
 
-type Page =
-  "home" | "scan" | "edit" | "cards" | "settings" | "privacy" | "help";
 function download(
   data: Blob | string,
   name: string,
@@ -60,7 +65,9 @@ function download(
 
 export default function App() {
   const [packInfo, setPackInfo] = useState("");
-  const [page, setPage] = useState<Page>("home"),
+  const [preparing, setPreparing] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(0);
+  const [page, setPageState] = useState<Page>(() => readRoute().page),
     [cards, setCards] = useState<Contact[]>([]),
     [draft, setDraft] = useState<Contact>(emptyContact),
     [images, setImages] = useState<string[]>([]),
@@ -200,29 +207,102 @@ export default function App() {
       window.removeEventListener("offline", change);
     };
   }, []);
+  const currentURL = useRef(location.hash || routeURL("home"));
+  const routeVersion = useRef(0);
+  function setPage(next: Page, id?: string) {
+    routeVersion.current++;
+    if (page === "scan" && next !== "scan") {
+      cancelled.current = true;
+      cancelOCR();
+      setBusy(false);
+    }
+    const url = routeURL(next, id);
+    if (location.hash !== url) history.pushState(null, "", url);
+    currentURL.current = url;
+    setPageState(next);
+    document.title = `${next === "cards" ? "Connections" : next.charAt(0).toUpperCase() + next.slice(1)} · STARRY Name Cards`;
+  }
+  async function restoreRoute() {
+    const route = readRoute();
+    const version = ++routeVersion.current;
+    document.title = `${route.page === "cards" ? "Connections" : route.page.charAt(0).toUpperCase() + route.page.slice(1)} · STARRY Name Cards`;
+    setPageState(route.page);
+    currentURL.current = location.hash || routeURL("home");
+    setMessage("");
+    setQr("");
+    if (route.page === "edit") {
+      if (route.id) {
+        try {
+          const card = await db.cards.get(route.id);
+          if (version !== routeVersion.current) return;
+          if (card) {
+            setDraft(card);
+            setImages(card.photos || []);
+            setRetain(!!card.photos?.length);
+          } else {
+            setPageState("notfound");
+          }
+        } catch {
+          setMessage("Could not open this connection. Please try again.");
+        }
+      } else {
+        setDraft(emptyContact());
+        setImages([]);
+        setRetain(false);
+      }
+    }
+    window.scrollTo(0, 0);
+  }
+  useEffect(() => {
+    if (!location.hash) history.replaceState(null, "", routeURL("home"));
+    void restoreRoute();
+  }, []);
+  useEffect(() => {
+    function onHistory() {
+      if (location.hash === currentURL.current) return;
+      if (
+        page === "edit" &&
+        !confirm("Leave this form? Unsaved changes will be lost.")
+      ) {
+        history.pushState(null, "", currentURL.current);
+        return;
+      }
+      cancelled.current = true;
+      cancelOCR();
+      setBusy(false);
+      void restoreRoute();
+    }
+    window.addEventListener("popstate", onHistory);
+    window.addEventListener("hashchange", onHistory);
+    return () => {
+      window.removeEventListener("popstate", onHistory);
+      window.removeEventListener("hashchange", onHistory);
+    };
+  }, [page]);
   function go(next: Page) {
     if (
       page === "edit" &&
       next !== "edit" &&
       !confirm("Leave this form? Unsaved changes will be lost.")
     )
-      return;
+      return false;
     setPage(next);
     setMessage("");
     setQr("");
     window.scrollTo(0, 0);
+    return true;
   }
   function start() {
+    if (!go("scan")) return;
     setDraft(emptyContact());
     setImages([]);
     setRetain(false);
-    go("scan");
   }
   function edit(card: Contact) {
     setDraft(structuredClone(card));
     setImages(card.photos || []);
     setRetain(!!card.photos?.length);
-    setPage("edit");
+    setPage("edit", card.id);
   }
   async function addImages(files: FileList | null) {
     if (!files) return;
@@ -382,22 +462,22 @@ export default function App() {
     }
   }
   async function prepare() {
-    setBusy(true);
+    setPreparing(true);
     try {
       const mod = offlineTools;
       await mod.prepareLanguage(ocrLanguage, (p: number, s?: string) => {
-        setProgress(p);
+        setDownloadProgress(p);
         setPackStatus(s || "Preparing offline assets…");
       });
       await checkOffline();
       setPackStatus(
-        "Selected OCR assets installed. Offline readiness is verified separately for the app shell.",
+        "Language downloaded. You can scan with it on this device.",
       );
     } catch (e) {
       setOffline(false);
       setPackStatus((e as Error).message);
     } finally {
-      setBusy(false);
+      setPreparing(false);
     }
   }
   const set = (key: keyof Contact, value: unknown) =>
@@ -502,13 +582,23 @@ export default function App() {
           />
         ) : (
           <>
-            <button
-              className="back"
-              onClick={() => go(page === "edit" ? "cards" : "home")}
-            >
-              <ArrowLeft size={16} />
-              {t("Home")}
-            </button>
+            {!["cards", "settings", "more"].includes(page) && (
+              <button
+                className="back"
+                onClick={() =>
+                  go(
+                    page === "edit"
+                      ? "cards"
+                      : ["privacy", "profile", "help"].includes(page)
+                        ? "more"
+                        : "home",
+                  )
+                }
+              >
+                <ArrowLeft size={16} />
+                {t("Back")}
+              </button>
+            )}
             {page === "scan" && (
               <section className="panel">
                 <div className="eyebrow">{t("A NEW CONNECTION")}</div>
@@ -930,7 +1020,7 @@ export default function App() {
                   <div>
                     <div className="eyebrow">{t("YOUR CONNECTIONS")}</div>
                     <h1>
-                      {t("My Name Cards")}{" "}
+                      {t("Connections")}{" "}
                       <span className="number">{cards.length}</span>
                     </h1>
                   </div>
@@ -1088,122 +1178,240 @@ export default function App() {
                 </small>
               </section>
             )}
-            {page === "settings" && (
-              <section className="panel prose">
-                <h1>{t("Settings")}</h1>
-                <h2>{t("Offline access")}</h2>
+            {page === "more" && (
+              <section className="panel more-page">
+                <div className="page-intro">
+                  <div className="eyebrow">STARRY NAME CARDS</div>
+                  <h1>{t("More")}</h1>
+                  <p>{t("Make yourself at home.")}</p>
+                </div>
+                <div className="menu-list">
+                  {(
+                    [
+                      {
+                        target: "profile",
+                        title: "Profile",
+                        description: "Your details, on this device",
+                        Icon: UserRound,
+                      },
+                      {
+                        target: "privacy",
+                        title: "Privacy",
+                        description: "Your data stays yours",
+                        Icon: ShieldCheck,
+                      },
+                      {
+                        target: "settings",
+                        title: "Settings",
+                        description: "Language, offline access & storage",
+                        Icon: SettingsIcon,
+                      },
+                      {
+                        target: "help",
+                        title: "Help",
+                        description: "A little guidance when you need it",
+                        Icon: CircleHelp,
+                      },
+                    ] as const
+                  ).map(({ target, title, description, Icon }) => (
+                    <a
+                      href={routeURL(target)}
+                      key={target}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        go(target);
+                      }}
+                    >
+                      <span className="menu-icon">
+                        <Icon size={22} />
+                      </span>
+                      <span>
+                        <strong>{t(title)}</strong>
+                        <small>{t(description)}</small>
+                      </span>
+                      <ChevronRight size={18} />
+                    </a>
+                  ))}
+                </div>
+                <div className="settings-card install-guide">
+                  <h2>{t("Keep STARRY on your home screen")}</h2>
+                  <p>
+                    {t(
+                      "Use Install in your browser menu. On iPhone or iPad, open Safari, choose Share, then Add to Home Screen and Open as Web App.",
+                    )}
+                  </p>
+                  <small>
+                    {t(
+                      "Prepare offline access in Settings before using OCR without an internet connection.",
+                    )}
+                  </small>
+                </div>
+                {import.meta.env.VITE_SOURCE_URL && (
+                  <a
+                    className="button"
+                    href={import.meta.env.VITE_SOURCE_URL}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {t("Source code ↗")}
+                  </a>
+                )}
+              </section>
+            )}
+            {page === "profile" && <Profile t={t} />}
+            {page === "notfound" && (
+              <section className="panel empty">
+                <h1>{t("Page not found")}</h1>
                 <p>
-                  {online
-                    ? "Your device is online."
-                    : "Your device is offline."}{" "}
-                  Offline readiness depends on cached app files and the selected
-                  OCR pack.
+                  {t(
+                    "This page or connection is not available on this device.",
+                  )}
                 </p>
-                <label>
-                  {t("Recognition language")}
-                  <select
-                    value={ocrLanguage}
-                    onChange={(e) => {
-                      setOcrLanguage(e.target.value as typeof ocrLanguage);
-                      setOffline(false);
+                <button onClick={() => go("home")}>{t("Go home")}</button>
+              </section>
+            )}
+            {page === "settings" && (
+              <section className="panel prose settings-page">
+                <div className="page-intro">
+                  <h1>{t("Settings")}</h1>
+                  <p>{t("Your app, your preferences.")}</p>
+                </div>
+                <div className="settings-card">
+                  <h2>{t("Offline access")}</h2>
+                  <p>
+                    {online
+                      ? "Your device is online."
+                      : "Your device is offline."}{" "}
+                    Download a language once to scan without internet.
+                  </p>
+                  <label>
+                    {t("Recognition language")}
+                    <select
+                      value={ocrLanguage}
+                      onChange={(e) => {
+                        setOcrLanguage(e.target.value as typeof ocrLanguage);
+                        setOffline(false);
+                      }}
+                    >
+                      <option value="eng">{t("English")}</option>
+                      <option value="mya">
+                        {t("Myanmar \u2014 experimental")}
+                      </option>
+                      <option value="eng+mya">
+                        {t("English + Myanmar \u2014 experimental")}
+                      </option>
+                    </select>
+                  </label>
+                  <button
+                    className="primary"
+                    disabled={preparing}
+                    onClick={() => void prepare()}
+                  >
+                    <Download size={18} />
+                    {preparing ? "Preparing…" : "Download for offline use"}
+                  </button>
+                  {preparing && <progress value={downloadProgress} max={1} />}
+                  <p>{packInfo}</p>
+                  <p role="status">{t(packStatus)}</p>
+                  <button
+                    onClick={async () => {
+                      const m = offlineTools;
+                      await m.removeMyanmar();
+                      await checkOffline();
+                      setPackStatus("Optional Myanmar pack removed.");
                     }}
                   >
-                    <option value="eng">{t("English")}</option>
-                    <option value="mya">
-                      {t("Myanmar \u2014 experimental")}
-                    </option>
-                    <option value="eng+mya">
-                      {t("English + Myanmar \u2014 experimental")}
-                    </option>
-                  </select>
-                </label>
-                <button
-                  className="primary"
-                  disabled={busy}
-                  onClick={() => void prepare()}
-                >
-                  <Download size={18} />
-                  {busy ? "Preparing…" : "Download / verify offline assets"}
-                </button>
-                {busy && <progress value={progress} max={1} />}
-                <p>{packInfo}</p>
-                <p role="status">{t(packStatus)}</p>
-                <button
-                  onClick={async () => {
-                    const m = offlineTools;
-                    await m.removeMyanmar();
-                    await checkOffline();
-                    setPackStatus("Optional Myanmar pack removed.");
-                  }}
-                >
-                  {t("Remove Myanmar pack")}
-                </button>
-                <p>
-                  {t(
-                    "Downloads come from this app\u2019s host. Myanmar OCR accuracy is experimental. Interface language does not change OCR recognition.",
-                  )}
-                </p>
-                <h2>{t("Language")}</h2>
-                <p>
-                  {t(
-                    "Use the language switch at the top. Myanmar translations are a draft and need human review. Some detailed instructions remain in English.",
-                  )}
-                </p>
-                <h2>{t("Browser storage")}</h2>
-                <button
-                  onClick={async () =>
-                    setMessage(
-                      (await navigator.storage?.persist?.())
-                        ? "Persistent storage granted. Backups are still recommended."
-                        : "Persistent storage was not granted or is unsupported. Export backups regularly.",
-                    )
-                  }
-                >
-                  {t("Request persistent storage")}
-                </button>
-                <button
-                  className="danger"
-                  onClick={async () => {
-                    if (
-                      confirm(
-                        "Delete all saved cards and local app data? Exported or shared files will not be deleted.",
-                      )
-                    ) {
-                      try {
-                        await db.cards.clear();
-                        setDraft(emptyContact());
-                        setImages([]);
-                        cancelOCR();
+                    {t("Remove Myanmar pack")}
+                  </button>
+                  <p>
+                    {t(
+                      "Downloads come from this app\u2019s host. Myanmar OCR accuracy is experimental. Interface language does not change OCR recognition.",
+                    )}
+                  </p>
+                </div>
+                <div className="settings-card">
+                  <h2>{t("Language")}</h2>
+                  <label>
+                    {t("Interface language")}
+                    <select
+                      value={language}
+                      onChange={(e) => {
+                        setLanguage(e.target.value);
                         try {
-                          localStorage.removeItem("starry-ui");
+                          localStorage.setItem("starry-ui", e.target.value);
                         } catch {
-                          /* Storage may be restricted. */
+                          /* session-only preference */
                         }
-                        const keys =
-                          "caches" in window ? await caches.keys() : [];
-                        await Promise.all(
-                          keys
-                            .filter((k) =>
-                              k.startsWith(
-                                `starry-${new URL(import.meta.env.BASE_URL, location.href).href}`,
-                              ),
-                            )
-                            .map((k) => caches.delete(k)),
-                        );
-                        await refresh();
-                        setOffline(false);
-                        setMessage("Local cards and cached assets deleted.");
-                      } catch {
-                        setMessage(
-                          "Could not delete all local data. Please retry or use your browser’s site-data settings.",
-                        );
-                      }
+                      }}
+                    >
+                      <option value="en">English</option>
+                      <option value="my">မြန်မာ</option>
+                    </select>
+                  </label>
+                  <p>
+                    {t(
+                      "Use the language switch at the top. Myanmar translations are a draft and need human review. Some detailed instructions remain in English.",
+                    )}
+                  </p>
+                </div>
+                <div className="settings-card">
+                  <h2>{t("Browser storage")}</h2>
+                  <button
+                    onClick={async () =>
+                      setMessage(
+                        (await navigator.storage?.persist?.())
+                          ? "Persistent storage granted. Backups are still recommended."
+                          : "Persistent storage was not granted or is unsupported. Export backups regularly.",
+                      )
                     }
-                  }}
-                >
-                  <Trash2 size={16} />
-                  {t("Delete all local data")}
-                </button>
+                  >
+                    {t("Request persistent storage")}
+                  </button>
+                  <button
+                    className="danger"
+                    onClick={async () => {
+                      if (
+                        confirm(
+                          "Delete all saved cards and local app data? Exported or shared files will not be deleted.",
+                        )
+                      ) {
+                        try {
+                          await db.cards.clear();
+                          setDraft(emptyContact());
+                          setImages([]);
+                          cancelOCR();
+                          try {
+                            localStorage.removeItem("starry-ui");
+                            localStorage.removeItem(PROFILE_KEY);
+                          } catch {
+                            /* Storage may be restricted. */
+                          }
+                          const keys =
+                            "caches" in window ? await caches.keys() : [];
+                          await Promise.all(
+                            keys
+                              .filter((k) =>
+                                k.startsWith(
+                                  `starry-${new URL(import.meta.env.BASE_URL, location.href).href}`,
+                                ),
+                              )
+                              .map((k) => caches.delete(k)),
+                          );
+                          await refresh();
+                          setOffline(false);
+                          setMessage("Local cards and cached assets deleted.");
+                        } catch {
+                          setMessage(
+                            "Could not delete all local data. Please retry or use your browser’s site-data settings.",
+                          );
+                        }
+                      }
+                    }}
+                  >
+                    <Trash2 size={16} />
+                    {t("Delete all local data")}
+                  </button>
+                </div>
               </section>
             )}
             {(page === "privacy" || page === "help") && (
@@ -1272,32 +1480,12 @@ export default function App() {
           </>
         )}
       </main>
-      <footer>
+      <footer className="app-attribution">
         <span>
           A free community project by <strong>STARRY Solutions</strong>
         </span>
-        <nav>
-          <button
-            onClick={() => {
-              void checkOffline();
-              go("settings");
-            }}
-          >
-            {t("Settings")}
-          </button>
-          <button onClick={() => go("privacy")}>{t("Privacy")}</button>
-          <button onClick={() => go("help")}>{t("Help")}</button>
-          {import.meta.env.VITE_SOURCE_URL && (
-            <a
-              href={import.meta.env.VITE_SOURCE_URL}
-              target="_blank"
-              rel="noreferrer"
-            >
-              {t("Source code \u2197")}
-            </a>
-          )}
-        </nav>
       </footer>
+      <AppNav page={page} go={go} t={t} />
       {duplicates.length > 0 && (
         <div className="modal-backdrop">
           <section

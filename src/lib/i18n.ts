@@ -240,3 +240,28 @@ export const translations: Record<string, string> = {
   "Merged details are ready for review. Save to apply the merge.":
     "ပေါင်းစည်းထားသော အချက်အလက်များကို စစ်ဆေးနိုင်ပါပြီ။ ပေါင်းစည်းမှုကို အတည်ပြုရန် သိမ်းပါ။",
 };
+
+Object.assign(translations, {
+  Connections: "အဆက်အသွယ်များ",
+  More: "နောက်ထပ်",
+  Profile: "ကိုယ်ရေးအကျဉ်း",
+  "Your profile": "သင့်ကိုယ်ရေးအကျဉ်း",
+  Back: "နောက်သို့",
+  "Your app, your preferences.": "သင့်အက်ပ်၊ သင့်စိတ်ကြိုက်ရွေးချယ်မှုများ။",
+  "Make yourself at home.": "သင့်စိတ်ကြိုက် အသုံးပြုပါ။",
+  "Display name": "ပြသမည့်အမည်",
+  "About you": "သင့်အကြောင်း",
+  "Save profile": "ကိုယ်ရေးအကျဉ်း သိမ်းရန်",
+  "Profile saved on this device.": "ဤစက်တွင် ကိုယ်ရေးအကျဉ်း သိမ်းပြီးပါပြီ။",
+  "Interface language": "အက်ပ်ဘာသာစကား",
+  "A little about you. Only on this device.":
+    "သင့်အကြောင်း အနည်းငယ်။ ဤစက်တွင်သာ သိမ်းဆည်းထားပါမည်။",
+  "Your details, on this device": "သင့်အချက်အလက်များ၊ ဤစက်တွင်သာ",
+  "Your data stays yours": "သင့်အချက်အလက်များသည် သင့်ထံတွင်သာ ရှိပါသည်",
+  "Language, offline access & storage":
+    "ဘာသာစကား၊ အော့ဖ်လိုင်းနှင့် သိမ်းဆည်းမှု",
+  "A little guidance when you need it": "လိုအပ်သည့်အခါ အကူအညီ",
+  "Keep STARRY on your home screen": "STARRY ကို ပင်မမျက်နှာပြင်တွင် ထည့်ထားပါ",
+  "Go home": "ပင်မစာမျက်နှာသို့",
+  "Page not found": "စာမျက်နှာ မတွေ့ပါ",
+});

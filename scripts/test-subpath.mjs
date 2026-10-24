@@ -30,15 +30,14 @@ try {
     await navigator.serviceWorker.ready;
   });
   await page.reload();
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.getByRole("link", { name: "Settings", exact: true }).click();
+  await page.getByRole("button", { name: "Download for offline use" }).click();
   await page
-    .getByRole("button", { name: "Download / verify offline assets" })
-    .click();
-  await page
-    .getByText("Selected OCR assets installed.", { exact: false })
+    .getByText("Language downloaded.", { exact: false })
     .waitFor({ timeout: 60000 });
   await context.setOffline(true);
   await page.reload();
+  await page.getByRole("link", { name: "Home", exact: true }).click();
   await page.getByRole("heading", { name: /Your next connection/ }).waitFor();
   await page.getByRole("button", { name: /Scan a Name Card/ }).click();
   await page.getByRole("button", { name: "Enter Details Manually" }).click();
