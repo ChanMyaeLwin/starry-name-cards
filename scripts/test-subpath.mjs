@@ -43,7 +43,9 @@ try {
   await page.getByRole("button", { name: /Scan a Name Card/ }).click();
   await page.getByRole("button", { name: "Enter Details Manually" }).click();
   await page.getByLabel("Full name", { exact: true }).fill("Subpath Example");
+  await page.getByRole("button", { name: "Continue to contact" }).click();
   await page.getByRole("button", { name: "Save to My Name Cards" }).click();
+  await page.waitForURL(/#\/connections$/);
   await page.getByText("Subpath Example", { exact: true }).waitFor();
   assert.deepEqual(errors, []);
   console.log("Subpath offline launch, assets, and local save passed.");

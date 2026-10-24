@@ -85,3 +85,9 @@ The install icon and heading share one row at mobile and desktop widths. More li
 Deployed release `20261024-1c26abf` to https://cards.starrymm.com with an isolated Nginx site and versioned static directory. Verified HTTP redirects to HTTPS, a valid certificate, application/wasm responses and revalidation headers. Nginx configuration validation, the existing Certbot timer, the site-scoped renewal hook and a certificate-renewal dry run passed. The initial certificate expires on 22 January 2027 and is configured for automatic renewal.
 
 An isolated Chromium session downloaded both English and Myanmar OCR packs through the production HTTPS domain. With browser networking disabled, the app reloaded and the actual OCR engine recognized `alex@example.com` from a synthetic card with no page errors. This is an executed desktop-browser production check; physical phone installation, camera and native sharing remain manual checks. The obsolete temporary tunnel was stopped.
+
+### Card wizard (2026-10-24)
+
+Photo capture now leads to editable details and then a contact preview with explicit save, VCF download, share, and QR actions. Both English and Myanmar OCR are required and used together. The source photo stays above the review form and contact preview; phone, email, and website fields can be added. Photo retention remains optional and off by default. Mobile viewport zoom is restricted where browsers honor it; physical iOS/Android gesture behavior still needs device review.
+
+Executed for this update: lint, TypeScript, 29 unit tests, production build, all 15 Playwright scenarios (including real bilingual offline OCR, pack eviction, cancellation, wizard review/back navigation, and contact actions), and subpath offline/save checks. Mobile layout inspected at 390 × 844. Native-device zoom and contact import remain manual checks.

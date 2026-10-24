@@ -75,6 +75,8 @@ export default function App() {
   const confirmation = useConfirmation();
   const historyPending = useRef(false);
   const exitApproved = useRef(false);
+  const ocrLanguage = "eng+mya";
+  const [contactPreview, setContactPreview] = useState(false);
   const [ocrDownload, setOcrDownload] = useState(false);
   const [packInfo, setPackInfo] = useState("");
   const [preparing, setPreparing] = useState(false);
@@ -93,7 +95,6 @@ export default function App() {
         }
       })(),
     ),
-    [ocrLanguage, setOcrLanguage] = useState<"eng" | "mya" | "eng+mya">("eng"),
     [message, setMessage] = useState(""),
     [busy, setBusy] = useState(false),
     [progress, setProgress] = useState(0),
@@ -235,6 +236,7 @@ export default function App() {
   const routeVersion = useRef(0);
   function setPage(next: Page, id?: string) {
     routeVersion.current++;
+    setContactPreview(false);
     if (page === "scan" && next !== "scan") {
       cancelled.current = true;
       cancelOCR();
@@ -248,6 +250,7 @@ export default function App() {
   }
   async function restoreRoute() {
     const route = readRoute();
+    setContactPreview(false);
     const version = ++routeVersion.current;
     document.title = `${route.page === "cards" ? "Connections" : route.page.charAt(0).toUpperCase() + route.page.slice(1)} · STARRY Name Cards`;
     setPageState(route.page);
@@ -688,6 +691,24 @@ export default function App() {
                 {t("Back")}
               </button>
             )}
+            {(page === "scan" || page === "edit") && (
+              <ol className="wizard-steps" aria-label="Card progress">
+                {["1. Card photo", "2. Review details", "3. Contact"].map(
+                  (label, index) => (
+                    <li
+                      key={label}
+                      aria-current={
+                        (page === "scan" ? 0 : contactPreview ? 2 : 1) === index
+                          ? "step"
+                          : undefined
+                      }
+                    >
+                      {t(label)}
+                    </li>
+                  ),
+                )}
+              </ol>
+            )}
             {page === "scan" && (
               <section className="panel">
                 <div className="eyebrow">{t("A NEW CONNECTION")}</div>
@@ -785,21 +806,10 @@ export default function App() {
                     </div>
                   ))}
                 </div>
-                <label>
-                  {t("OCR recognition language")}
-                  <select
-                    value={ocrLanguage}
-                    onChange={(e) =>
-                      setOcrLanguage(e.target.value as typeof ocrLanguage)
-                    }
-                  >
-                    <option value="eng">{t("English")}</option>
-                    <option value="mya">{t("Myanmar (experimental)")}</option>
-                    <option value="eng+mya">
-                      {t("English + Myanmar (experimental)")}
-                    </option>
-                  </select>
-                </label>
+                <p className="recognition-note">
+                  {t("English + Myanmar (experimental)")} ·{" "}
+                  {t("Both languages are read automatically.")}
+                </p>
                 {busy ? (
                   <div role="status">
                     <progress value={progress} max={1} />
@@ -835,20 +845,32 @@ export default function App() {
             {page === "edit" && (
               <section className="panel">
                 <div className="eyebrow">{t("MAKE IT YOURS")}</div>
-                <h1>{t("Check the details")}</h1>
-                <p>{t("Please check the details before saving.")}</p>
-                <div className="review-layout">
-                  <div>
-                    <div className="image-grid">
-                      {images.map((s, i) => (
-                        <img
-                          key={i}
-                          className="review-photo"
-                          src={s}
-                          alt={`Card ${i + 1}`}
-                        />
-                      ))}
-                    </div>
+                <h1>
+                  {t(
+                    contactPreview
+                      ? "A contact, on your terms."
+                      : "Check the details",
+                  )}
+                </h1>
+                <p>
+                  {t(
+                    contactPreview
+                      ? "Your contact is ready. Choose what to do next."
+                      : "Please check the details before saving.",
+                  )}
+                </p>
+                <div className="wizard-review">
+                  <div className="image-grid wizard-photo">
+                    {images.map((s, i) => (
+                      <img
+                        key={i}
+                        className="review-photo"
+                        src={s}
+                        alt={`Card ${i + 1}`}
+                      />
+                    ))}
+                  </div>
+                  <div hidden={contactPreview}>
                     <div className="form-grid">
                       {(
                         [
@@ -1019,10 +1041,58 @@ export default function App() {
                         )}
                       </label>
                     )}
+                    <button
+                      className="primary wizard-next"
+                      onClick={() => {
+                        const errors = validateContact(draft);
+                        if (errors.length) {
+                          setMessage(errors.join(" "));
+                          return;
+                        }
+                        setContactPreview(true);
+                        window.scrollTo(0, 0);
+                      }}
+                    >
+                      {t("Continue to contact")}
+                      <ArrowRight size={18} />
+                    </button>
                   </div>
-                  <aside className="save-panel">
+                  <aside className="save-panel" hidden={!contactPreview}>
+                    <button onClick={() => setContactPreview(false)}>
+                      {t("Back to details")}
+                    </button>
+                    <div className="contact-preview">
+                      <h2>{draft.name || draft.company}</h2>
+                      <p>
+                        {[draft.title, draft.company]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
+                      <dl>
+                        {[
+                          ...draft.phones.map((v) => [
+                            v.label || "Phone",
+                            v.value,
+                          ]),
+                          ...draft.emails.map((v) => [
+                            v.label || "Email",
+                            v.value,
+                          ]),
+                          ...draft.websites.map((v) => ["Website", v]),
+                          ["Address", draft.address],
+                          ["Notes", draft.notes],
+                        ]
+                          .filter(([, value]) => value.trim())
+                          .map(([label, value], i) => (
+                            <div key={i}>
+                              <dt>{t(label)}</dt>
+                              <dd>{value}</dd>
+                            </div>
+                          ))}
+                      </dl>
+                    </div>
                     <ShieldCheck size={24} />
-                    <h3>{t("A contact, on your terms.")}</h3>
+                    <h3>{t("Contact actions")}</h3>
                     <p>
                       {t(
                         "Saving keeps this card in this browser. Downloading or sharing creates a contact file without saving it.",
@@ -1596,20 +1666,12 @@ export default function App() {
             </h2>
             <p id="ocr-download-description">
               {t(
-                "The selected recognition language is not downloaded yet. Download English and Myanmar together to read cards on this device. Your photo stays on your device.",
+                "English and Myanmar OCR files are needed. Download English and Myanmar together to read cards on this device. Your photo stays on your device.",
               )}
             </p>
             <p>
               {t("OCR recognition language")}:{" "}
-              <strong>
-                {t(
-                  ocrLanguage === "eng"
-                    ? "English"
-                    : ocrLanguage === "mya"
-                      ? "Myanmar (experimental)"
-                      : "English + Myanmar (experimental)",
-                )}
-              </strong>
+              <strong>{t("English + Myanmar (experimental)")}</strong>
             </p>
             <p>
               {t(

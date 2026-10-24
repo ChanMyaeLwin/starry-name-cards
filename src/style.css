@@ -1417,3 +1417,75 @@ html[lang="my"] .action-card {
   width: 100%;
   height: auto;
 }
+
+/* Keep the source card in view while reviewing each wizard step. */
+[hidden] {
+  display: none !important;
+}
+.wizard-steps {
+  display: flex;
+  list-style: none;
+  padding: 0;
+  gap: 0.5rem;
+  margin: 0 0 1rem;
+}
+.wizard-steps li {
+  flex: 1;
+  padding: 0.8rem 0.5rem;
+  border-radius: 12px;
+  background: #edf0f8;
+  color: #59677e;
+  font-size: 0.85rem;
+  text-align: center;
+}
+.wizard-steps [aria-current] {
+  background: #2452e8;
+  color: white;
+  font-weight: 700;
+}
+.wizard-photo {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #fff;
+  padding: 0.5rem 0;
+}
+.wizard-photo:empty {
+  display: none;
+}
+.wizard-photo .review-photo {
+  max-height: 25vh;
+  width: 100%;
+  object-fit: contain;
+}
+.wizard-next {
+  margin-top: 1.5rem;
+  width: 100%;
+}
+.wizard-review .save-panel {
+  position: static;
+  margin-top: 1rem;
+}
+.contact-preview {
+  overflow-wrap: anywhere;
+}
+.contact-preview dl div {
+  margin: 0.8rem 0;
+}
+.contact-preview dt {
+  color: #63718a;
+  font-size: 0.85rem;
+}
+.contact-preview dd {
+  margin: 0.2rem 0;
+  white-space: pre-wrap;
+}
+button,
+a {
+  touch-action: manipulation;
+}
+input,
+select,
+textarea {
+  font-size: max(16px, 1em);
+}

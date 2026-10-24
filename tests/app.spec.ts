@@ -15,6 +15,10 @@ test.beforeEach(async ({ page }) => {
     },
   );
 });
+async function preview(page: Page) {
+  const next = page.getByRole("button", { name: "Continue to contact" });
+  if (await next.isVisible()) await next.click();
+}
 async function manual(page: Page, name = "Alex Example") {
   await page
     .getByRole("button", { name: "Scan a Name Card", exact: false })
@@ -34,11 +38,14 @@ test("manual contact persists, edits, exports, backs up, restores and deletes", 
   ).toBeVisible();
   await page.getByRole("link", { name: "Home", exact: true }).click();
   await manual(page);
+  await preview(page);
   await page.getByRole("button", { name: "Save to My Name Cards" }).click();
+  await expect(page).toHaveURL(/#\/connections$/);
   await expect(page.getByText("Alex Example", { exact: true })).toBeVisible();
   await page.reload();
   await page.getByRole("button", { name: /^AL Alex Example/ }).click();
   await page.getByLabel("Full name", { exact: true }).fill("Alex Updated");
+  await preview(page);
   await page.getByText("Contact QR code", { exact: true }).click();
   await page.getByRole("button", { name: "Generate QR" }).click();
   await expect(
@@ -49,6 +56,7 @@ test("manual contact persists, edits, exports, backs up, restores and deletes", 
     .getByRole("button", { name: "Download Contact (.vcf)", exact: true })
     .click();
   expect((await downloaded).suggestedFilename()).toBe("Alex Updated.vcf");
+  await preview(page);
   await page.getByRole("button", { name: "Save to My Name Cards" }).click();
   page.on("dialog", (d) => d.accept());
   await page.removeLocatorHandler(
@@ -114,6 +122,7 @@ test("download/share does not save and unsafe text remains text", async ({
     }),
   );
   const dl = page.waitForEvent("download");
+  await preview(page);
   await page
     .getByRole("button", { name: "Share Contact", exact: true })
     .click();
@@ -240,6 +249,7 @@ test("real local OCR offline and missing pack fallback", async ({
     "alex@example.com",
   );
   await page.getByLabel("Full name", { exact: true }).fill("Alex Example");
+  await preview(page);
   await page.getByRole("button", { name: "Save to My Name Cards" }).click();
   await page.getByRole("button", { name: "Scan a card", exact: true }).click();
   await page
@@ -261,7 +271,7 @@ test("real local OCR offline and missing pack fallback", async ({
       }
     }
   });
-  await page.getByLabel("OCR recognition language").selectOption("mya");
+  await expect(page.getByLabel("OCR recognition language")).toHaveCount(0);
   await page.getByRole("button", { name: "Read Card", exact: true }).click();
   await expect(
     page.getByRole("dialog", { name: "Download OCR to read this card" }),
@@ -270,8 +280,9 @@ test("real local OCR offline and missing pack fallback", async ({
     page.getByRole("button", { name: "Download and read" }),
   ).toBeDisabled();
   await page.getByRole("button", { name: "Not now", exact: true }).click();
-  await page.getByLabel("OCR recognition language").selectOption("eng");
+  await context.setOffline(false);
   await page.getByRole("button", { name: "Read Card", exact: true }).click();
+  await page.getByRole("button", { name: "Download and read" }).click();
   await page.getByRole("button", { name: "Cancel reading" }).click();
   await expect(
     page.getByRole("button", { name: "Read Card", exact: true }),
@@ -337,11 +348,13 @@ test("duplicate email requires an explicit choice", async ({ page }) => {
   await manual(page, "First Example");
   await page.getByRole("button", { name: "Add email" }).click();
   await page.getByLabel("emails 1", { exact: true }).fill("shared@example.com");
+  await preview(page);
   await page.getByRole("button", { name: "Save to My Name Cards" }).click();
   await page.getByRole("link", { name: "Home", exact: true }).click();
   await manual(page, "Second Example");
   await page.getByRole("button", { name: "Add email" }).click();
   await page.getByLabel("emails 1", { exact: true }).fill("SHARED@example.com");
+  await preview(page);
   await page.getByRole("button", { name: "Save to My Name Cards" }).click();
   await expect(
     page.getByRole("dialog", { name: "A familiar connection?" }),
@@ -385,6 +398,7 @@ test("app navigation has distinct URLs, history, local profile and reloadable co
   ).toBeVisible();
   await nav.getByRole("link", { name: "Home", exact: true }).click();
   await manual(page, "Routing Example");
+  await preview(page);
   await page.getByRole("button", { name: "Save to My Name Cards" }).click();
   await expect(page).toHaveURL(/#\/connections$/);
   await page.getByRole("button", { name: /^RO Routing Example/ }).click();
@@ -549,6 +563,7 @@ test("confirmation popups protect data and unsaved forms", async ({ page }) => {
   await expect(page.getByLabel("Full name", { exact: true })).toHaveValue(
     "Keep Example",
   );
+  await preview(page);
   await page.getByRole("button", { name: "Save to My Name Cards" }).click();
   await page.getByRole("link", { name: "Settings", exact: true }).click();
   await page
@@ -664,6 +679,57 @@ test("More links to About and the public repository with an inline install headi
   await expect(
     page.getByRole("heading", { name: "About STARRY Name Cards" }),
   ).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+});
+
+test("wizard keeps the card visible and preserves added fields between steps", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "Scan a Name Card", exact: false })
+    .first()
+    .click();
+  const image = await page.evaluate(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 600;
+    canvas.height = 300;
+    const ctx = canvas.getContext("2d")!;
+    ctx.fillStyle = "white";
+    ctx.fillRect(0, 0, 600, 300);
+    ctx.fillStyle = "black";
+    ctx.font = "32px Arial";
+    ctx.fillText("Example Studio", 30, 100);
+    return canvas.toDataURL().split(",")[1];
+  });
+  await page
+    .locator("input[type=file]")
+    .first()
+    .setInputFiles({
+      name: "card.png",
+      mimeType: "image/png",
+      buffer: Buffer.from(image, "base64"),
+    });
+  await page.getByRole("button", { name: "Enter Details Manually" }).click();
+  await expect(
+    page.getByRole("button", { name: "Save to My Name Cards" }),
+  ).toBeHidden();
+  await page.getByLabel("Full name", { exact: true }).fill("Alex Example");
+  await page.getByRole("button", { name: "Add phone", exact: true }).click();
+  await page.getByLabel("phones 1", { exact: true }).fill("+95 912345678");
+  await preview(page);
+  await expect(page.getByAltText("Card 1", { exact: true })).toBeVisible();
+  await expect(page.getByText("+95 912345678", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Back to details" }).click();
+  await expect(page.getByLabel("phones 1", { exact: true })).toHaveValue(
+    "+95 912345678",
+  );
+  await expect(page.getByAltText("Card 1", { exact: true })).toBeVisible();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,

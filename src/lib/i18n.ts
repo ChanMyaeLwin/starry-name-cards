@@ -3,6 +3,15 @@
  * Full-string keys intentionally preserve English fallback for new copy.
  */
 export const translations: Record<string, string> = {
+  "1. Card photo": "၁။ ကတ်ဓာတ်ပုံ",
+  "2. Review details": "၂။ အချက်အလက် စစ်ဆေးရန်",
+  "3. Contact": "၃။ အဆက်အသွယ်",
+  "Continue to contact": "အဆက်အသွယ်သို့ ဆက်သွားရန်",
+  "Back to details": "အချက်အလက်များသို့ ပြန်သွားရန်",
+  "Contact actions": "အဆက်အသွယ် လုပ်ဆောင်ချက်များ",
+  "Both languages are read automatically.":
+    "ဘာသာစကား နှစ်မျိုးလုံးကို အလိုအလျောက် ဖတ်ပါသည်။",
+
   "Your next connection,": "သင့်နောက်ထပ် အဆက်အသွယ်ကို၊",
   "kept close.": "အလွယ်တကူ သိမ်းထားပါ။",
   "Scan a Name Card": "အမည်ကတ် စကင်ဖတ်ရန်",

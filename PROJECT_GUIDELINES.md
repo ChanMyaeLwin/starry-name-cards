@@ -531,3 +531,7 @@ The final delivery must include:
 * Known limitations and outstanding real-device checks
 
 Start implementation now.
+
+## Accepted product updates — card wizard
+
+Use three steps: card photo, editable extracted details, and contact preview/actions. Keep the source card visible while reviewing and previewing. Read English and Myanmar together without a recognition-language selector; allow additional phone, email, and website fields. Keep saving distinct from exporting/sharing. Restrict mobile zoom as requested, subject to browser accessibility overrides.
