@@ -1,5 +1,7 @@
 # STARRY Name Cards
 
+[Open the app](https://cards.starrymm.com) · [Production hosting](docs/DEPLOYMENT.md)
+
 A free community project by STARRY Solutions. Turn a physical business card into a digital contact using OCR on your own device. No account, backend, cloud OCR, analytics, or paid service is required.
 
 **Your card photos and contact details stay on your device unless you choose to export or share them.** Ordinary hosting access logs may exist when loading the app online; see [Privacy](PRIVACY.md).
@@ -86,7 +88,7 @@ For hosting under a subdirectory, set the build base including trailing slash:
 VITE_BASE_PATH=/name-cards/ npm run build
 ```
 
-The public source repository is [ChanMyaeLwin/starry-name-cards](https://github.com/ChanMyaeLwin/starry-name-cards). Forks can override the in-app source link with `VITE_SOURCE_URL`. Never put secrets in `VITE_*` variables: they are public build inputs. The source repository is public. No production site has been deployed.
+The public source repository is [ChanMyaeLwin/starry-name-cards](https://github.com/ChanMyaeLwin/starry-name-cards). Forks can override the in-app source link with `VITE_SOURCE_URL`. Never put secrets in `VITE_*` variables: they are public build inputs. The source repository is public. The production app is hosted at https://cards.starrymm.com; see [deployment notes](docs/DEPLOYMENT.md).
 
 ## Limitations and release checks
 

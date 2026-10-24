@@ -33,7 +33,7 @@ Reviewed the home screen at 390 px and 1440 px widths. The narrow layout has no 
 - Native-speaker review of draft Myanmar UI copy; some generated status/conflict messages use English fallback.
 - Larger real-world accuracy and performance evaluation on lower-memory phones.
 
-See `QA_CHECKLIST.md` for the device checklist. The source repository is now public at https://github.com/ChanMyaeLwin/starry-name-cards, with private vulnerability reporting enabled. No production deployment has been performed.
+See `QA_CHECKLIST.md` for the device checklist. The source repository is now public at https://github.com/ChanMyaeLwin/starry-name-cards, with private vulnerability reporting enabled. The production app is deployed at https://cards.starrymm.com.
 
 ## Implementation references
 
@@ -79,3 +79,9 @@ The header, collection illustration icon, empty collection, install panel and po
 ## About and community links
 
 The install icon and heading share one row at mobile and desktop widths. More links to an addressable About page (`/#/about`) explaining the community purpose, local processing and ways to contribute. STARRY Solutions links to its website, and More/About link to the public GitHub repository. Route reload, active navigation and destination URLs are checked in the browser suite.
+
+## Production deployment — 24 October 2026
+
+Deployed release `20261024-1c26abf` to https://cards.starrymm.com with an isolated Nginx site and versioned static directory. Verified HTTP redirects to HTTPS, a valid certificate, application/wasm responses and revalidation headers. Nginx configuration validation, the existing Certbot timer, the site-scoped renewal hook and a certificate-renewal dry run passed. The initial certificate expires on 22 January 2027 and is configured for automatic renewal.
+
+An isolated Chromium session downloaded both English and Myanmar OCR packs through the production HTTPS domain. With browser networking disabled, the app reloaded and the actual OCR engine recognized `alex@example.com` from a synthetic card with no page errors. This is an executed desktop-browser production check; physical phone installation, camera and native sharing remain manual checks. The obsolete temporary tunnel was stopped.
