@@ -1,3 +1,4 @@
+import { localId } from "./id";
 /** All contact values are untrusted plain text. No country or name-order assumptions. */
 export interface ContactValue {
   label: string;
@@ -24,7 +25,7 @@ export interface Contact {
 export function emptyContact(): Contact {
   const now = new Date().toISOString();
   return {
-    id: crypto.randomUUID(),
+    id: localId(),
     name: "",
     givenName: "",
     familyName: "",

@@ -1322,3 +1322,39 @@ html[lang="my"] .action-card {
     min-height: 80px;
   }
 }
+.install-directions {
+  background: white;
+  border: 1px solid #dce4f4;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 18px;
+}
+.install-directions h3 {
+  font-size: 15px;
+  margin-bottom: 10px;
+}
+.install-directions ol {
+  padding-left: 20px;
+  margin: 0 0 14px;
+}
+.install-directions li {
+  font-size: 13px;
+  line-height: 1.7;
+  margin-bottom: 9px;
+  color: #53637e;
+}
+.install-requirement {
+  padding: 12px;
+  background: #fff7e6;
+  border-radius: 8px;
+  color: #76531c;
+}
+.installed-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #276947 !important;
+}
+.install-guide .button-row {
+  margin: 14px 0;
+}

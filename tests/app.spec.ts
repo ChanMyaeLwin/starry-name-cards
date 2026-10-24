@@ -307,3 +307,81 @@ test("app navigation has distinct URLs, history, local profile and reloadable co
     ),
   ).toBe(true);
 });
+test("install prompt is captured before More opens and used only after a click", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect(
+    page.getByRole("navigation", { name: "Main navigation" }),
+  ).toBeVisible();
+  await page.evaluate(() => {
+    const event = new Event("beforeinstallprompt", { cancelable: true });
+    Object.assign(event, {
+      prompt: async () => {
+        document.documentElement.dataset.installCalls = String(
+          Number(document.documentElement.dataset.installCalls || 0) + 1,
+        );
+        return { outcome: "dismissed" };
+      },
+      userChoice: Promise.resolve({ outcome: "dismissed" }),
+    });
+    window.dispatchEvent(event);
+  });
+  await page.getByRole("link", { name: "More", exact: true }).click();
+  expect(
+    await page.locator("html").getAttribute("data-install-calls"),
+  ).toBeNull();
+  await page
+    .getByRole("button", { name: "Add to home screen", exact: true })
+    .click();
+  await expect(
+    page.getByText(
+      "Installation cancelled. You can try again from your browser menu.",
+    ),
+  ).toBeVisible();
+  expect(await page.locator("html").getAttribute("data-install-calls")).toBe(
+    "1",
+  );
+  await page
+    .getByRole("button", { name: "Add to home screen", exact: true })
+    .click();
+  expect(await page.locator("html").getAttribute("data-install-calls")).toBe(
+    "1",
+  );
+  await expect(
+    page.getByRole("heading", { name: "On your computer" }),
+  ).toBeVisible();
+  await page.evaluate(() => window.dispatchEvent(new Event("appinstalled")));
+  await expect(
+    page.getByText("STARRY is installed on this device."),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Add to home screen", exact: true }),
+  ).toHaveCount(0);
+});
+test("iPhone install fallback shows Safari directions", async ({ browser }) => {
+  const context = await browser.newContext({
+    userAgent:
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1",
+  });
+  const page = await context.newPage();
+  await page.addInitScript(() =>
+    window.addEventListener("beforeinstallprompt", (event) =>
+      event.stopImmediatePropagation(),
+    ),
+  );
+  await page.goto("http://127.0.0.1:4173/#/more");
+  await page
+    .getByRole("button", { name: "Add to home screen", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "On iPhone or iPad" }),
+  ).toBeVisible();
+  await expect(page.getByText("Open this address in Safari.")).toBeVisible();
+  await expect(
+    page.getByText(
+      "Choose Add to Home Screen, turn on Open as Web App if shown, then tap Add.",
+    ),
+  ).toBeVisible();
+  await context.close();
+});

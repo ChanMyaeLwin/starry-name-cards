@@ -265,3 +265,16 @@ Object.assign(translations, {
   "Go home": "ပင်မစာမျက်နှာသို့",
   "Page not found": "စာမျက်နှာ မတွေ့ပါ",
 });
+
+Object.assign(translations, {
+  "Add to home screen": "ပင်မမျက်နှာပြင်သို့ ထည့်ရန်",
+  "Show directions": "လုပ်ဆောင်ရန် အဆင့်များ",
+  "Opening…": "ဖွင့်နေသည်…",
+  "On iPhone or iPad": "iPhone သို့မဟုတ် iPad တွင်",
+  "On Android": "Android တွင်",
+  "On your computer": "ကွန်ပျူတာတွင်",
+  "STARRY is installed on this device.":
+    "ဤစက်တွင် STARRY ကို ထည့်သွင်းထားပါပြီ။",
+  "Open your connections with one tap, like any other app.":
+    "အခြားအက်ပ်များကဲ့သို့ တစ်ချက်နှိပ်ရုံဖြင့် အဆက်အသွယ်များကို ဖွင့်ပါ။",
+});

@@ -13,7 +13,8 @@
     "test:e2e": "playwright test",
     "format": "prettier --write src tests scripts *.ts *.js *.json index.html",
     "format:check": "prettier --check src tests scripts *.ts *.js *.json index.html",
-    "test:subpath": "node scripts/test-subpath.mjs"
+    "test:subpath": "node scripts/test-subpath.mjs",
+    "preview:lan": "vite preview --host 0.0.0.0 --port 4173 --strictPort"
   },
   "keywords": [
     "business-cards",

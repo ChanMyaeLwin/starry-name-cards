@@ -30,6 +30,23 @@ npm run test:subpath
 
 See the [verification report](docs/VERIFICATION.md) for executed checks and [manual verification](docs/QA_CHECKLIST.md) for pending physical-device checks.
 
+## Test on another Wi-Fi device
+
+Build the app, then keep the preview server running:
+
+```sh
+npm run build
+npm run preview:lan
+```
+
+Open the Network address printed by Vite on a phone connected to the same Wi-Fi. Allow local-network access if your firewall asks. Guest Wi-Fi or client isolation can prevent devices from reaching each other. The network address can change when you reconnect.
+
+An HTTP network address supports screen and local-contact testing, but full PWA installation and service-worker offline functionality require HTTPS. For those device checks, use a trusted HTTPS testing host. Localhost's secure-context exception applies only on the device running the server.
+
+In **More**, choose **Add to home screen**. Supporting browsers display their installation prompt; otherwise STARRY shows iPhone/iPad, Android or desktop directions. Browser menu availability varies. After installation, prepare offline assets in Settings.
+
+Storage is separate for each origin: localhost, the network IP and an HTTPS host do not share saved contacts. Use a backup to transfer fictional test data between them.
+
 ## App navigation
 
 The persistent app navigation contains **Home**, **Connections**, **Settings**, and **More**. More contains Profile, Privacy, Settings, Help and installation guidance. The optional local profile needs no account and is excluded from contact backups.

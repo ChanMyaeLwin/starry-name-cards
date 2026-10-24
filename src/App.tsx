@@ -1,3 +1,6 @@
+import InstallCard from "./components/InstallCard";
+import { useInstall } from "./lib/useInstall";
+import { localId } from "./lib/id";
 import AppNav from "./components/AppNav";
 import Profile, { PROFILE_KEY } from "./components/Profile";
 import { readRoute, routeURL, type Page } from "./lib/routes";
@@ -64,6 +67,7 @@ function download(
 }
 
 export default function App() {
+  const installation = useInstall();
   const [packInfo, setPackInfo] = useState("");
   const [preparing, setPreparing] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
@@ -440,7 +444,7 @@ export default function App() {
     try {
       const all = [...cards];
       for (const importedCard of imported) {
-        const card = { ...importedCard, id: crypto.randomUUID() };
+        const card = { ...importedCard, id: localId() };
         const match = findDuplicates(card, all);
         if (
           match.length &&
@@ -449,7 +453,7 @@ export default function App() {
           )
         )
           continue;
-        all.push({ ...card, id: crypto.randomUUID() });
+        all.push({ ...card, id: localId() });
       }
       await restoreCards(all);
       setImported(null);
@@ -904,16 +908,16 @@ export default function App() {
                         onChange={(e) => set("rawText", e.target.value)}
                       />
                       <button
-                        onClick={() =>
-                          void navigator.clipboard
-                            .writeText(draft.rawText)
-                            .then(() => setMessage("Recognized text copied."))
-                            .catch(() =>
-                              setMessage(
-                                "Select the text and copy it manually.",
-                              ),
-                            )
-                        }
+                        onClick={async () => {
+                          try {
+                            if (!navigator.clipboard)
+                              throw new Error("unavailable");
+                            await navigator.clipboard.writeText(draft.rawText);
+                            setMessage("Recognized text copied.");
+                          } catch {
+                            setMessage("Select the text and copy it manually.");
+                          }
+                        }}
                       >
                         {t("Copy text")}
                       </button>
@@ -1233,19 +1237,7 @@ export default function App() {
                     </a>
                   ))}
                 </div>
-                <div className="settings-card install-guide">
-                  <h2>{t("Keep STARRY on your home screen")}</h2>
-                  <p>
-                    {t(
-                      "Use Install in your browser menu. On iPhone or iPad, open Safari, choose Share, then Add to Home Screen and Open as Web App.",
-                    )}
-                  </p>
-                  <small>
-                    {t(
-                      "Prepare offline access in Settings before using OCR without an internet connection.",
-                    )}
-                  </small>
-                </div>
+                <InstallCard installation={installation} t={t} />
                 {import.meta.env.VITE_SOURCE_URL && (
                   <a
                     className="button"

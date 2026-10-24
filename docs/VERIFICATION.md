@@ -9,9 +9,9 @@ Date: 24 October 2026. Environment: macOS ARM64, Node.js 22.21.1, Playwright 1.6
 | `npm run lint` | Passed |
 | `npm run typecheck` | Passed |
 | `npm run format:check` | Passed |
-| `npm test` | 28 tests passed across five files |
+| `npm test` | 29 tests passed across six files |
 | `npm run build` | Passed; static output in `dist/` |
-| `npm run test:e2e` | Seven browser scenarios passed |
+| `npm run test:e2e` | Nine browser scenarios passed |
 | `npm run test:subpath` | Passed at `/name-cards/`; offline launch, asset preparation and local save |
 | `npm audit` | Zero known vulnerabilities reported at verification time |
 
@@ -46,3 +46,9 @@ See `QA_CHECKLIST.md` for the device checklist. No public deployment or remote r
 ## Mobile navigation update
 
 Added persistent Home / Connections / Settings / More navigation, compact settings cards, local profile storage and distinct hash routes. Browser coverage includes route reload, back/forward, profile persistence, saved-connection deep links, privacy deep links, active navigation and mobile overflow. Profile information is local-only and excluded from contact backups.
+
+## Wi-Fi preview and installation update
+
+Added a LAN preview command and a guided Add to home screen button. Browser tests simulate the install event lifecycle, verify prompts require a click and are used once, and check Safari directions using an iPhone user agent. These simulations do not establish physical-device installation compatibility.
+
+A Chromium smoke test against the host's HTTP LAN address confirmed an insecure context, manual contact creation, reload persistence and HTTPS installation guidance without page errors. UUID generation also works when `crypto.randomUUID` is unavailable on HTTP. A physical phone connection remains a manual check.
