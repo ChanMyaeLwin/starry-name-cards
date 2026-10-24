@@ -1290,9 +1290,16 @@ export default function App() {
                     </strong>
                   </p>
                   <p>{t("Coming later: Thai, Chinese, and Japanese.")}</p>
+                  {!window.isSecureContext && (
+                    <p role="alert">
+                      {t(
+                        "OCR download needs HTTPS or localhost. This HTTP Wi-Fi preview cannot prepare OCR. Use HTTPS on your phone, or localhost on this computer. You can still enter details manually.",
+                      )}
+                    </p>
+                  )}
                   <button
                     className="primary"
-                    disabled={preparing}
+                    disabled={preparing || !window.isSecureContext}
                     onClick={() => void prepare()}
                   >
                     <Download size={18} />
