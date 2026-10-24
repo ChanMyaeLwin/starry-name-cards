@@ -283,6 +283,23 @@ test("real local OCR offline and missing pack fallback", async ({
   await context.setOffline(false);
   await page.getByRole("button", { name: "Read Card", exact: true }).click();
   await page.getByRole("button", { name: "Download and read" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Check the details" }),
+  ).toBeVisible({ timeout: 60000 });
+  await page.getByRole("link", { name: "Home", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Scan a Name Card", exact: false })
+    .first()
+    .click();
+  await page
+    .locator("input[type=file]")
+    .first()
+    .setInputFiles({
+      name: "synthetic.png",
+      mimeType: "image/png",
+      buffer: Buffer.from(bytes, "base64"),
+    });
+  await page.getByRole("button", { name: "Read Card", exact: true }).click();
   await page.getByRole("button", { name: "Cancel reading" }).click();
   await expect(
     page.getByRole("button", { name: "Read Card", exact: true }),
@@ -733,6 +750,33 @@ test("wizard keeps the card visible and preserves added fields between steps", a
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+});
+
+test("mobile header stays visible while scrolling and zoom gestures are restricted", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/#/settings");
+  await page.evaluate(() => window.scrollTo(0, 600));
+  await expect(page.locator(".header")).toBeVisible();
+  expect(
+    await page
+      .locator(".header")
+      .evaluate((el) => Math.round(el.getBoundingClientRect().top)),
+  ).toBe(0);
+  expect(
+    await page.evaluate(
+      () => getComputedStyle(document.documentElement).touchAction,
+    ),
+  ).toBe("pan-x pan-y");
+  expect(
+    await page.evaluate(
+      () =>
+        !document.dispatchEvent(
+          new Event("gesturestart", { cancelable: true }),
+        ),
     ),
   ).toBe(true);
 });
