@@ -551,3 +551,60 @@ test("confirmation popups protect data and unsaved forms", async ({ page }) => {
     page.getByText("Your next connection starts here."),
   ).toBeVisible();
 });
+
+test("Back at the app boundary offers Stay or Exit without stacking guards on reload", async ({
+  page,
+}) => {
+  await page.route("https://previous.example.test/**", (route) =>
+    route.fulfill({ contentType: "text/html", body: "<h1>Previous page</h1>" }),
+  );
+  await page.goto("https://previous.example.test/previous-page");
+  await page.goto("/#/home");
+  await page.getByRole("navigation", { name: "Main navigation" }).waitFor();
+  await page.getByRole("link", { name: "Settings", exact: true }).click();
+  await page.goBack();
+  await expect(page).toHaveURL(/#\/home$/);
+  await expect(page.getByRole("dialog", { name: "Exit STARRY?" })).toHaveCount(
+    0,
+  );
+  const length = await page.evaluate(() => history.length);
+  await page.reload();
+  await expect(
+    page.getByRole("navigation", { name: "Main navigation" }),
+  ).toBeVisible();
+  expect(await page.evaluate(() => history.length)).toBe(length);
+  await page.goBack();
+  const exit = page.getByRole("dialog", { name: "Exit STARRY?" });
+  await expect(exit).toBeVisible();
+  await expect(
+    exit.getByRole("button", { name: "Stay", exact: true }),
+  ).toBeFocused();
+  await exit.getByRole("button", { name: "Stay", exact: true }).click();
+  await expect(page).toHaveURL(/#\/home$/);
+  await page.goBack();
+  await exit.getByRole("button", { name: "Exit", exact: true }).click();
+  await expect(page).toHaveURL(/previous-page$/);
+  await expect(
+    page.getByRole("heading", { name: "Previous page" }),
+  ).toBeVisible();
+});
+
+test("exit explains how to leave when the browser refuses to close", async ({
+  page,
+}) => {
+  await page.removeLocatorHandler(page.getByRole("alertdialog"));
+  await page.addInitScript(() => {
+    window.close = () => {};
+    Object.defineProperty(history, "length", { value: 1 });
+  });
+  await page.goto("/#/home");
+  await page.getByRole("heading", { name: /Your next connection/ }).click();
+  await page.goBack();
+  await page
+    .getByRole("dialog", { name: "Exit STARRY?" })
+    .getByRole("button", { name: "Exit", exact: true })
+    .click();
+  await expect(page.getByRole("alertdialog")).toContainText(
+    "Your browser cannot close this app automatically.",
+  );
+});

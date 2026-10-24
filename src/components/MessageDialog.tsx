@@ -1,11 +1,14 @@
+import BrandIcon from "./BrandIcon";
 import { useEffect, useId, useRef } from "react";
 export default function MessageDialog({
   message,
   onClose,
   t,
   onDismiss,
+  labels = {},
 }: {
   message: string;
+  labels?: { title?: string; confirm?: string; cancel?: string };
   onDismiss?: () => void;
   onClose: () => void;
   t: (text: string) => string;
@@ -33,14 +36,19 @@ export default function MessageDialog({
         close(false);
       }}
     >
-      <h2 id={`${id}-title`}>{t(onDismiss ? "Please confirm" : "Notice")}</h2>
+      <BrandIcon size={48} />
+      <h2 id={`${id}-title`}>
+        {t(labels.title || (onDismiss ? "Please confirm" : "Notice"))}
+      </h2>
       <p id={`${id}-body`}>{t(message)}</p>
       <div className="button-row">
         {onDismiss && (
-          <button onClick={() => close(false)}>{t("Cancel")}</button>
+          <button onClick={() => close(false)}>
+            {t(labels.cancel || "Cancel")}
+          </button>
         )}
         <button className="primary" onClick={() => close()}>
-          {t(onDismiss ? "Confirm" : "OK")}
+          {t(labels.confirm || (onDismiss ? "Confirm" : "OK"))}
         </button>
       </div>
     </dialog>

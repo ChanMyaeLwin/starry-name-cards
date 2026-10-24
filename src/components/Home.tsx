@@ -1,10 +1,5 @@
-import {
-  ArrowRight,
-  Check,
-  ContactRound,
-  ScanLine,
-  ShieldCheck,
-} from "lucide-react";
+import BrandIcon from "./BrandIcon";
+import { ArrowRight, Check, ScanLine, ShieldCheck } from "lucide-react";
 
 export interface HomeProps {
   t: (text: string) => string;
@@ -78,7 +73,7 @@ export default function Home({
         <button className="action-card collection-card" onClick={openCards}>
           <div className="action-top">
             <span className="action-icon">
-              <ContactRound size={28} />
+              <BrandIcon size={40} />
             </span>
             <span className="count-chip">
               {cardsCount} {t("SAVED")}

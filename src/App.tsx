@@ -1,3 +1,4 @@
+import BrandIcon from "./components/BrandIcon";
 import { useConfirmation } from "./lib/useConfirmation";
 import MessageDialog from "./components/MessageDialog";
 import InstallCard from "./components/InstallCard";
@@ -13,7 +14,6 @@ import {
   ArrowRight,
   ArrowLeft,
   ScanLine,
-  ContactRound,
   ShieldCheck,
   Plus,
   Search,
@@ -71,6 +71,7 @@ export default function App() {
   const installation = useInstall();
   const confirmation = useConfirmation();
   const historyPending = useRef(false);
+  const exitApproved = useRef(false);
   const [ocrDownload, setOcrDownload] = useState(false);
   const [packInfo, setPackInfo] = useState("");
   const [preparing, setPreparing] = useState(false);
@@ -166,6 +167,7 @@ export default function App() {
   useEffect(() => {
     if (page !== "edit") return;
     const warn = (e: BeforeUnloadEvent) => {
+      if (exitApproved.current) return;
       e.preventDefault();
     };
     window.addEventListener("beforeunload", warn);
@@ -236,7 +238,7 @@ export default function App() {
       setBusy(false);
     }
     const url = routeURL(next, id);
-    if (location.hash !== url) history.pushState(null, "", url);
+    if (location.hash !== url) history.pushState({ starryApp: true }, "", url);
     currentURL.current = url;
     setPageState(next);
     document.title = `${next === "cards" ? "Connections" : next.charAt(0).toUpperCase() + next.slice(1)} · STARRY Name Cards`;
@@ -273,14 +275,58 @@ export default function App() {
     window.scrollTo(0, 0);
   }
   useEffect(() => {
-    if (!location.hash) history.replaceState(null, "", routeURL("home"));
+    if (!location.hash)
+      history.replaceState(history.state, "", routeURL("home"));
+    if (!history.state?.starryApp) {
+      history.replaceState(
+        {
+          starryApp: true,
+          starryExitGuard: true,
+          canGoBack: history.length > 1,
+        },
+        "",
+      );
+      history.pushState({ starryApp: true }, "");
+    } else if (history.state?.starryExitGuard) {
+      history.pushState({ starryApp: true }, "");
+    }
+    const resetExit = () => {
+      exitApproved.current = false;
+    };
+    window.addEventListener("pageshow", resetExit);
     void restoreRoute();
+    return () => window.removeEventListener("pageshow", resetExit);
   }, []);
   useEffect(() => {
     async function onHistory() {
       if (historyPending.current) return;
       historyPending.current = true;
       try {
+        if (exitApproved.current) return;
+        if (history.state?.starryExitGuard) {
+          const canGoBack = history.state.canGoBack;
+          history.pushState({ starryApp: true }, "", currentURL.current);
+          const accepted = await confirmation.ask(
+            page === "edit"
+              ? "Exit STARRY? Unsaved changes will be lost."
+              : "Do you want to exit STARRY? Your saved cards will stay on this device.",
+            { title: "Exit STARRY?", confirm: "Exit", cancel: "Stay" },
+          );
+          if (accepted) {
+            exitApproved.current = true;
+            if (canGoBack) history.go(-2);
+            else {
+              window.close();
+              window.setTimeout(() => {
+                exitApproved.current = false;
+                setMessage(
+                  "Your browser cannot close this app automatically. Close this tab or use your phone’s Home gesture to leave.",
+                );
+              }, 300);
+            }
+          }
+          return;
+        }
         if (location.hash === currentURL.current) return;
         if (
           page === "edit" &&
@@ -288,7 +334,7 @@ export default function App() {
             "Leave this form? Unsaved changes will be lost.",
           ))
         ) {
-          history.pushState(null, "", currentURL.current);
+          history.pushState({ starryApp: true }, "", currentURL.current);
           return;
         }
         cancelled.current = true;
@@ -553,9 +599,7 @@ export default function App() {
           onClick={() => go("home")}
           aria-label="STARRY Name Cards home"
         >
-          <span className="brand-mark">
-            <ContactRound size={23} />
-          </span>
+          <BrandIcon />
           <span>
             <strong>
               STARRY<span className="brand-divider"> / </span>
@@ -1097,7 +1141,7 @@ export default function App() {
                 </div>
                 {!cards.length ? (
                   <div className="empty">
-                    <ContactRound size={52} />
+                    <BrandIcon size={64} />
                     <h2>{t("Your next connection starts here.")}</h2>
                     <p>{t("Scan a card or enter the details yourself.")}</p>
                     <button className="primary" onClick={start}>
@@ -1504,6 +1548,7 @@ export default function App() {
       {confirmation.message && (
         <MessageDialog
           key={confirmation.id}
+          labels={confirmation.labels}
           message={confirmation.message}
           onClose={() => confirmation.finish(true)}
           onDismiss={() => confirmation.finish(false)}

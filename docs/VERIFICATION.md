@@ -11,7 +11,7 @@ Date: 24 October 2026. Environment: macOS ARM64, Node.js 22.21.1, Playwright 1.6
 | `npm run format:check` | Passed |
 | `npm test` | 29 tests passed across six files |
 | `npm run build` | Passed; static output in `dist/` |
-| `npm run test:e2e` | Eleven browser scenarios passed |
+| `npm run test:e2e` | Thirteen browser scenarios passed |
 | `npm run test:subpath` | Passed at `/name-cards/`; offline launch, asset preparation and local save |
 | `npm audit` | Zero known vulnerabilities reported at verification time |
 
@@ -70,3 +70,9 @@ App notices now use a native modal dialog, including storage requests, save/expo
 ## Confirmation popups
 
 In-app confirmations now share the notice popup design. Clear-data, individual deletion, backup choices, duplicate-import/merge decisions, update reloads and navigation away from drafts wait for an explicit answer. Cancel and Escape reject the action. Browser-owned tab-close/reload warnings remain native because browsers do not permit custom beforeunload dialogs. Added browser coverage for cancel/confirm data deletion and cancelling draft navigation.
+
+## Back-to-exit and app icon
+
+Back within the app keeps normal screen history. At the initial app boundary, a Stay / Exit popup protects against accidental exit. Browser coverage verifies Stay, Exit to a previous external page, and reloads without accumulating extra history entries. A simulated no-history/browser-close refusal checks the manual-exit fallback. Physical-device Back gestures and installed-PWA window closing still need device verification.
+
+The header, collection illustration icon, empty collection, install panel and popups share `public/icon.svg`, the current favicon artwork. Existing PNG PWA and Apple home-screen assets use the same design. Mobile popup appearance was visually reviewed at 390 px width.

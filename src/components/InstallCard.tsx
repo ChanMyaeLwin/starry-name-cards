@@ -1,3 +1,4 @@
+import BrandIcon from "./BrandIcon";
 import { useState } from "react";
 import { Download, Check, Smartphone } from "lucide-react";
 import type { useInstall } from "../lib/useInstall";
@@ -18,6 +19,7 @@ export default function InstallCard({
       className="settings-card install-guide"
       aria-labelledby="install-title"
     >
+      <BrandIcon size={48} />
       <h2 id="install-title">{t("Keep STARRY on your home screen")}</h2>
       <p>{t("Open your connections with one tap, like any other app.")}</p>
       {installation.installed ? (

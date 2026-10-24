@@ -298,3 +298,9 @@ Object.assign(translations, {
   "Please confirm": "အတည်ပြုပေးပါ",
   Confirm: "အတည်ပြုရန်",
 });
+
+Object.assign(translations, {
+  "Exit STARRY?": "STARRY မှ ထွက်မလား။",
+  Exit: "ထွက်ရန်",
+  Stay: "ဆက်နေမည်",
+});
