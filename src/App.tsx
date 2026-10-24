@@ -1,0 +1,1490 @@
+import * as offlineTools from "./lib/offline";
+import Home from "./components/Home";
+import { useEffect, useRef, useState } from "react";
+import {
+  ArrowRight,
+  ArrowLeft,
+  ScanLine,
+  ContactRound,
+  ShieldCheck,
+  Plus,
+  Search,
+  Upload,
+  Camera,
+  Download,
+  Trash2,
+  RotateCw,
+  Crop,
+  X,
+  Check,
+  Globe,
+  FileText,
+  Share2,
+  QrCode,
+} from "lucide-react";
+import {
+  emptyContact,
+  parseContactText,
+  validateContact,
+  findDuplicates,
+  toVCard,
+  contactFilename,
+  type Contact,
+} from "./lib/contact";
+import { db, loadCards, saveCard, restoreCards } from "./lib/storage";
+import {
+  parseBackupAsync,
+  createBackupAsync,
+  exportVCardsAsync,
+} from "./lib/backup";
+import { translations } from "./lib/i18n";
+import { processImage, transformImage } from "./lib/images";
+import { recognizeImages, cancelOCR } from "./lib/ocr";
+
+type Page =
+  "home" | "scan" | "edit" | "cards" | "settings" | "privacy" | "help";
+function download(
+  data: Blob | string,
+  name: string,
+  type = "text/vcard;charset=utf-8",
+) {
+  const url = URL.createObjectURL(
+    typeof data === "string" ? new Blob([data], { type }) : data,
+  );
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+export default function App() {
+  const [packInfo, setPackInfo] = useState("");
+  const [page, setPage] = useState<Page>("home"),
+    [cards, setCards] = useState<Contact[]>([]),
+    [draft, setDraft] = useState<Contact>(emptyContact),
+    [images, setImages] = useState<string[]>([]),
+    [retain, setRetain] = useState(false),
+    [language, setLanguage] = useState(
+      (() => {
+        try {
+          return localStorage.getItem("starry-ui") || "en";
+        } catch {
+          return "en";
+        }
+      })(),
+    ),
+    [ocrLanguage, setOcrLanguage] = useState<"eng" | "mya" | "eng+mya">("eng"),
+    [message, setMessage] = useState(""),
+    [busy, setBusy] = useState(false),
+    [progress, setProgress] = useState(0),
+    [status, setStatus] = useState(""),
+    [online, setOnline] = useState(navigator.onLine),
+    [search, setSearch] = useState(""),
+    [sort, setSort] = useState("recent"),
+    [duplicates, setDuplicates] = useState<Contact[]>([]),
+    [imported, setImported] = useState<Contact[] | null>(null),
+    [qr, setQr] = useState(""),
+    [qrFields, setQrFields] = useState({
+      phone: true,
+      email: true,
+      company: true,
+    }),
+    [cropIndex, setCropIndex] = useState<number | null>(null),
+    [crop, setCrop] = useState({ x: 0, y: 0, w: 100, h: 100 }),
+    [offline, setOffline] = useState(false),
+    [packStatus, setPackStatus] = useState(""),
+    [update, setUpdate] = useState<ServiceWorker | null>(null);
+  useEffect(() => {
+    const dialog = document.querySelector<HTMLElement>("[role=dialog]");
+    if (!dialog) return;
+    const previous = document.activeElement as HTMLElement;
+    const elements = () =>
+      Array.from(
+        dialog.querySelectorAll<HTMLElement>(
+          "button,input,select,textarea,a[href]",
+        ),
+      ).filter((e) => !e.hasAttribute("disabled"));
+    elements()[0]?.focus();
+    function key(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setDuplicates([]);
+        setImported(null);
+        setCropIndex(null);
+      }
+      if (e.key === "Tab") {
+        const list = elements(),
+          first = list[0],
+          last = list[list.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last?.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first?.focus();
+        }
+      }
+    }
+    document.addEventListener("keydown", key);
+    return () => {
+      document.removeEventListener("keydown", key);
+      previous?.focus();
+    };
+  }, [duplicates.length, imported, cropIndex]);
+  const fileRef = useRef<HTMLInputElement>(null),
+    cameraRef = useRef<HTMLInputElement>(null),
+    importRef = useRef<HTMLInputElement>(null),
+    cancelled = useRef(false);
+  useEffect(() => {
+    document.documentElement.lang = language;
+  }, [language]);
+  useEffect(() => {
+    if (page !== "edit") return;
+    const warn = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [page]);
+  const t = (text: string) =>
+    language === "my" ? translations[text] || text : text;
+  async function checkOffline() {
+    const m = offlineTools;
+    const s = await m.getOfflineStatus();
+    setOffline(
+      s.shell && ocrLanguage.split("+").every((l) => s[l as "eng" | "mya"]),
+    );
+    setPackInfo(
+      `English: ${s.eng ? "installed" : "not installed"} (${(s.englishBytes / 1048576).toFixed(1)} MB). Myanmar: ${s.mya ? "installed" : "not installed"} (+${(s.myanmarBytes / 1048576).toFixed(1)} MB).`,
+    );
+  }
+  useEffect(() => {
+    void checkOffline();
+  }, [page, ocrLanguage]);
+  const refresh = () =>
+    loadCards()
+      .then(setCards)
+      .catch(() =>
+        setMessage(
+          "Browser storage is unavailable. You can still enter and download a contact.",
+        ),
+      );
+  useEffect(() => {
+    void refresh();
+    void checkOffline();
+    const change = () => {
+      setOnline(navigator.onLine);
+      void checkOffline();
+    };
+    window.addEventListener("online", change);
+    window.addEventListener("offline", change);
+    if ("serviceWorker" in navigator && import.meta.env.PROD) {
+      void navigator.serviceWorker
+        .register(`${import.meta.env.BASE_URL}sw.js`)
+        .then((reg) => {
+          void navigator.serviceWorker.ready.then(() => checkOffline());
+          if (reg.waiting) setUpdate(reg.waiting);
+          reg.addEventListener("updatefound", () =>
+            reg.installing?.addEventListener("statechange", () => {
+              if (reg.waiting && navigator.serviceWorker.controller)
+                setUpdate(reg.waiting);
+            }),
+          );
+        })
+        .catch(() =>
+          setMessage("Offline preparation is unavailable in this browser."),
+        );
+    }
+    return () => {
+      window.removeEventListener("online", change);
+      window.removeEventListener("offline", change);
+    };
+  }, []);
+  function go(next: Page) {
+    if (
+      page === "edit" &&
+      next !== "edit" &&
+      !confirm("Leave this form? Unsaved changes will be lost.")
+    )
+      return;
+    setPage(next);
+    setMessage("");
+    setQr("");
+    window.scrollTo(0, 0);
+  }
+  function start() {
+    setDraft(emptyContact());
+    setImages([]);
+    setRetain(false);
+    go("scan");
+  }
+  function edit(card: Contact) {
+    setDraft(structuredClone(card));
+    setImages(card.photos || []);
+    setRetain(!!card.photos?.length);
+    setPage("edit");
+  }
+  async function addImages(files: FileList | null) {
+    if (!files) return;
+    try {
+      const processed = await Promise.all(
+        Array.from(files)
+          .slice(0, 2 - images.length)
+          .map(processImage),
+      );
+      setImages((prev) => [...prev, ...processed]);
+    } catch (e) {
+      setMessage((e as Error).message);
+    }
+    if (fileRef.current) fileRef.current.value = "";
+    if (cameraRef.current) cameraRef.current.value = "";
+  }
+  async function read() {
+    setBusy(true);
+    cancelled.current = false;
+    setMessage("");
+    try {
+      const text = await recognizeImages(images, ocrLanguage, (p, s) => {
+        setProgress(p);
+        setStatus(s);
+      });
+      if (!cancelled.current) {
+        setDraft(parseContactText(text));
+        setPage("edit");
+      }
+    } catch (e) {
+      if (!cancelled.current)
+        setMessage(
+          (e as Error).message || "Unable to read the image. Try manual entry.",
+        );
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function save(separately = false) {
+    const errors = validateContact(draft);
+    if (errors.length) {
+      setMessage(errors.join(" "));
+      return;
+    }
+    const candidate = { ...draft, photos: retain ? images : [] };
+    const matches = findDuplicates(
+      candidate,
+      cards.filter((c) => c.id !== draft.id),
+    );
+    if (matches.length && !separately) {
+      setDuplicates(matches);
+      return;
+    }
+    try {
+      await saveCard(candidate);
+      await refresh();
+      setDuplicates([]);
+      setPage("cards");
+      setMessage("Card saved in this browser.");
+    } catch {
+      setMessage(
+        "Could not save. Browser storage may be full or unavailable. Your details are still here; download the contact to keep a copy.",
+      );
+    }
+  }
+  function exportOne() {
+    const errors = validateContact(draft);
+    if (errors.length) return setMessage(errors.join(" "));
+    download(toVCard(draft), contactFilename(draft));
+    setMessage(
+      "Contact file downloaded. Open it to import using your device’s contacts app.",
+    );
+  }
+  async function share() {
+    if (validateContact(draft).length)
+      return setMessage("Add a name, company, phone number, or email first.");
+    const file = new File([toVCard(draft)], contactFilename(draft), {
+      type: "text/vcard",
+    });
+    if (navigator.canShare?.({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file] });
+      } catch (e) {
+        if ((e as Error).name !== "AbortError")
+          setMessage("Sharing failed. Download the contact instead.");
+      }
+    } else {
+      exportOne();
+      setMessage(
+        "File sharing is unavailable. Your contact was downloaded instead.",
+      );
+    }
+  }
+  async function makeQR() {
+    if (validateContact(draft).length) {
+      setMessage("Add a name, company, phone number, or email first.");
+      return;
+    }
+    try {
+      const { default: QRCode } = await import("qrcode");
+      setQr(
+        await QRCode.toDataURL(
+          toVCard({
+            ...draft,
+            phones: qrFields.phone ? draft.phones : [],
+            emails: qrFields.email ? draft.emails : [],
+            company: qrFields.company ? draft.company : "",
+            notes: "",
+            rawText: "",
+            photos: [],
+            address: "",
+            websites: [],
+          }),
+          { width: 320, margin: 2 },
+        ),
+      );
+    } catch {
+      setMessage(
+        "Too much contact information for a QR code. Include fewer details.",
+      );
+    }
+  }
+  async function importFile(file?: File) {
+    if (!file) return;
+    try {
+      if (file.size > 25 * 1024 * 1024)
+        throw new Error("Backup must be smaller than 25 MB.");
+      setImported(await parseBackupAsync(await file.text()));
+    } catch (e) {
+      setMessage((e as Error).message);
+    }
+  }
+  async function restore() {
+    if (!imported) return;
+    try {
+      const all = [...cards];
+      for (const importedCard of imported) {
+        const card = { ...importedCard, id: crypto.randomUUID() };
+        const match = findDuplicates(card, all);
+        if (
+          match.length &&
+          !confirm(
+            `Possible duplicate: ${card.name || card.company}. Import as a separate card? Cancel skips this card.`,
+          )
+        )
+          continue;
+        all.push({ ...card, id: crypto.randomUUID() });
+      }
+      await restoreCards(all);
+      setImported(null);
+      await refresh();
+      setMessage("Backup restored.");
+    } catch {
+      setMessage(
+        "Restore failed. No partial changes were saved. Check available browser storage.",
+      );
+    }
+  }
+  async function prepare() {
+    setBusy(true);
+    try {
+      const mod = offlineTools;
+      await mod.prepareLanguage(ocrLanguage, (p: number, s?: string) => {
+        setProgress(p);
+        setPackStatus(s || "Preparing offline assets…");
+      });
+      await checkOffline();
+      setPackStatus(
+        "Selected OCR assets installed. Offline readiness is verified separately for the app shell.",
+      );
+    } catch (e) {
+      setOffline(false);
+      setPackStatus((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  const set = (key: keyof Contact, value: unknown) =>
+    setDraft((d) => ({ ...d, [key]: value }));
+  const visible = cards
+    .filter((c) =>
+      [
+        c.name,
+        c.company,
+        ...c.phones.map((p) => p.value),
+        ...c.emails.map((p) => p.value),
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(search.toLowerCase()),
+    )
+    .sort((a, b) =>
+      sort === "name"
+        ? a.name.localeCompare(b.name)
+        : b.createdAt.localeCompare(a.createdAt),
+    );
+  return (
+    <div className="app">
+      <header className="header">
+        <button
+          className="brand"
+          onClick={() => go("home")}
+          aria-label="STARRY Name Cards home"
+        >
+          <span className="brand-mark">
+            <ContactRound size={23} />
+          </span>
+          <span>
+            <strong>
+              STARRY<span className="brand-divider"> / </span>
+            </strong>
+            <span className="brand-product">Name Cards</span>
+          </span>
+        </button>
+        <div className="header-right">
+          <span className="private-badge">
+            <ShieldCheck size={14} /> Private by design
+          </span>
+          <button
+            className="language"
+            onClick={() => {
+              const l = language === "en" ? "my" : "en";
+              setLanguage(l);
+              try {
+                localStorage.setItem("starry-ui", l);
+              } catch {
+                /* Language still changes for this visit. */
+              }
+              document.documentElement.lang = l === "my" ? "my" : "en";
+            }}
+          >
+            <Globe size={15} />
+            {language === "en" ? "EN / မြန်မာ" : "မြန်မာ / EN"}
+          </button>
+        </div>
+      </header>
+      <main>
+        {message && (
+          <div className="notice" role="status">
+            {t(message)}
+            <button aria-label="Dismiss message" onClick={() => setMessage("")}>
+              <X size={16} />
+            </button>
+          </div>
+        )}
+        {update && (
+          <div className="notice">
+            {t("Update available. Save your work before updating.")}
+            <button
+              onClick={() => {
+                if (confirm("Reload to update? Unsaved work will be lost.")) {
+                  navigator.serviceWorker.addEventListener(
+                    "controllerchange",
+                    () => location.reload(),
+                    { once: true },
+                  );
+                  update.postMessage("ACTIVATE_UPDATE");
+                }
+              }}
+            >
+              {t("Update now")}
+            </button>
+          </div>
+        )}
+        {page === "home" ? (
+          <Home
+            t={t}
+            cardsCount={cards.length}
+            start={start}
+            openCards={() => go("cards")}
+            offline={offline}
+            online={online}
+            openSettings={() => {
+              void checkOffline();
+              go("settings");
+            }}
+          />
+        ) : (
+          <>
+            <button
+              className="back"
+              onClick={() => go(page === "edit" ? "cards" : "home")}
+            >
+              <ArrowLeft size={16} />
+              {t("Home")}
+            </button>
+            {page === "scan" && (
+              <section className="panel">
+                <div className="eyebrow">{t("A NEW CONNECTION")}</div>
+                <h1>{t("Scan a Name Card")}</h1>
+                <p>
+                  {t(
+                    "Place the card on a plain surface with good lighting. Keep all text visible.",
+                  )}
+                </p>
+                <div className="upload-zone">
+                  <ScanLine size={44} />
+                  <h2>{t("Start with the front of your card")}</h2>
+                  <p>{t("Add up to two images: front and optional back.")}</p>
+                  <div className="button-row">
+                    <button
+                      className="primary"
+                      disabled={images.length >= 2 || busy}
+                      onClick={() => cameraRef.current?.click()}
+                    >
+                      <Camera size={18} />
+                      {t("Take Photo")}
+                    </button>
+                    <button
+                      disabled={images.length >= 2 || busy}
+                      onClick={() => fileRef.current?.click()}
+                    >
+                      <Upload size={18} />
+                      {t("Choose Photo")}
+                    </button>
+                  </div>
+                  <small>
+                    {t(
+                      "JPEG, PNG, WebP, GIF or BMP \u00b7 up to 20 MB / 60 MP",
+                    )}
+                    <br />
+                    {t(
+                      "Images are resized to 2,400 px. HEIC may need conversion.",
+                    )}
+                  </small>
+                </div>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif,image/bmp"
+                  multiple
+                  hidden
+                  onChange={(e) => void addImages(e.target.files)}
+                />
+                <input
+                  ref={cameraRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  hidden
+                  onChange={(e) => void addImages(e.target.files)}
+                />
+                <div className="image-grid">
+                  {images.map((src, i) => (
+                    <div key={i} className="image-card">
+                      <img
+                        src={src}
+                        alt={`${i === 0 ? "Front" : "Back"} of business card`}
+                      />
+                      <div className="button-row">
+                        <button
+                          aria-label={`Rotate image ${i + 1}`}
+                          onClick={async () => {
+                            const next = await transformImage(src, true);
+                            setImages((v) =>
+                              v.map((s, j) => (j === i ? next : s)),
+                            );
+                          }}
+                        >
+                          <RotateCw size={16} />
+                          {t("Rotate")}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setCropIndex(i);
+                            setCrop({ x: 0, y: 0, w: 100, h: 100 });
+                          }}
+                        >
+                          <Crop size={16} />
+                          {t("Crop")}
+                        </button>
+                        <button
+                          aria-label="Remove image"
+                          onClick={() =>
+                            setImages((v) => v.filter((_, j) => j !== i))
+                          }
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <label>
+                  {t("OCR recognition language")}
+                  <select
+                    value={ocrLanguage}
+                    onChange={(e) =>
+                      setOcrLanguage(e.target.value as typeof ocrLanguage)
+                    }
+                  >
+                    <option value="eng">{t("English")}</option>
+                    <option value="mya">{t("Myanmar (experimental)")}</option>
+                    <option value="eng+mya">
+                      {t("English + Myanmar (experimental)")}
+                    </option>
+                  </select>
+                </label>
+                {busy ? (
+                  <div role="status">
+                    <progress value={progress} max={1} />
+                    <p>{t(status)}</p>
+                    <button
+                      onClick={() => {
+                        cancelled.current = true;
+                        void cancelOCR();
+                        setBusy(false);
+                      }}
+                    >
+                      {t("Cancel reading")}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="button-row">
+                    <button
+                      className="primary"
+                      disabled={!images.length}
+                      onClick={() => void read()}
+                    >
+                      <ScanLine size={18} />
+                      {t("Read Card")}
+                    </button>
+                    <button onClick={() => setPage("edit")}>
+                      {t("Enter Details Manually")}
+                      <ArrowRight size={16} />
+                    </button>
+                  </div>
+                )}
+              </section>
+            )}
+            {page === "edit" && (
+              <section className="panel">
+                <div className="eyebrow">{t("MAKE IT YOURS")}</div>
+                <h1>{t("Check the details")}</h1>
+                <p>{t("Please check the details before saving.")}</p>
+                <div className="review-layout">
+                  <div>
+                    <div className="image-grid">
+                      {images.map((s, i) => (
+                        <img
+                          key={i}
+                          className="review-photo"
+                          src={s}
+                          alt={`Card ${i + 1}`}
+                        />
+                      ))}
+                    </div>
+                    <div className="form-grid">
+                      {(
+                        [
+                          "name",
+                          "givenName",
+                          "familyName",
+                          "company",
+                          "title",
+                          "address",
+                        ] as const
+                      ).map((key, i) => (
+                        <label key={key}>
+                          {t(
+                            [
+                              "Full name",
+                              "Given name (optional)",
+                              "Family name (optional)",
+                              "Company",
+                              "Job title",
+                              "Address",
+                            ][i],
+                          )}
+                          <input
+                            value={draft[key]}
+                            onChange={(e) => set(key, e.target.value)}
+                          />
+                        </label>
+                      ))}
+                    </div>
+                    {(["phones", "emails"] as const).map((key) => (
+                      <fieldset key={key}>
+                        <legend>
+                          {key === "phones"
+                            ? "Phone numbers"
+                            : "Email addresses"}
+                        </legend>
+                        {draft[key].map((item, i) => (
+                          <div className="repeat-row" key={i}>
+                            <input
+                              aria-label={`${key} label ${i + 1}`}
+                              value={item.label}
+                              onChange={(e) =>
+                                set(
+                                  key,
+                                  draft[key].map((v, j) =>
+                                    j === i
+                                      ? { ...v, label: e.target.value }
+                                      : v,
+                                  ),
+                                )
+                              }
+                            />
+                            <input
+                              aria-label={`${key} ${i + 1}`}
+                              type={key === "phones" ? "tel" : "text"}
+                              value={item.value}
+                              onChange={(e) =>
+                                set(
+                                  key,
+                                  draft[key].map((v, j) =>
+                                    j === i
+                                      ? { ...v, value: e.target.value }
+                                      : v,
+                                  ),
+                                )
+                              }
+                            />
+                            <button
+                              aria-label={`Remove ${key} ${i + 1}`}
+                              onClick={() =>
+                                set(
+                                  key,
+                                  draft[key].filter((_, j) => j !== i),
+                                )
+                              }
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                        ))}
+                        <button
+                          onClick={() =>
+                            set(key, [
+                              ...draft[key],
+                              { label: "Work", value: "" },
+                            ])
+                          }
+                        >
+                          <Plus size={15} />
+                          Add {key === "phones" ? "phone" : "email"}
+                        </button>
+                      </fieldset>
+                    ))}
+                    <fieldset>
+                      <legend>{t("Websites")}</legend>
+                      {draft.websites.map((v, i) => (
+                        <div className="repeat-row" key={i}>
+                          <input
+                            aria-label={`Website ${i + 1}`}
+                            value={v}
+                            onChange={(e) =>
+                              set(
+                                "websites",
+                                draft.websites.map((s, j) =>
+                                  j === i ? e.target.value : s,
+                                ),
+                              )
+                            }
+                          />
+                          <button
+                            aria-label="Remove website"
+                            onClick={() =>
+                              set(
+                                "websites",
+                                draft.websites.filter((_, j) => j !== i),
+                              )
+                            }
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        onClick={() => set("websites", [...draft.websites, ""])}
+                      >
+                        <Plus size={15} />
+                        {t("Add website")}
+                      </button>
+                    </fieldset>
+                    <label>
+                      {t("Notes")}
+                      <textarea
+                        value={draft.notes}
+                        onChange={(e) => set("notes", e.target.value)}
+                      />
+                    </label>
+                    <details>
+                      <summary>{t("Raw recognized text")}</summary>
+                      <textarea
+                        aria-label="Raw recognized text"
+                        value={draft.rawText}
+                        onChange={(e) => set("rawText", e.target.value)}
+                      />
+                      <button
+                        onClick={() =>
+                          void navigator.clipboard
+                            .writeText(draft.rawText)
+                            .then(() => setMessage("Recognized text copied."))
+                            .catch(() =>
+                              setMessage(
+                                "Select the text and copy it manually.",
+                              ),
+                            )
+                        }
+                      >
+                        {t("Copy text")}
+                      </button>
+                    </details>
+                    {images.length > 0 && (
+                      <label className="checkbox">
+                        <input
+                          type="checkbox"
+                          checked={retain}
+                          onChange={(e) => setRetain(e.target.checked)}
+                        />
+                        {t(
+                          "Retain processed card photos. This uses more device storage.",
+                        )}
+                      </label>
+                    )}
+                  </div>
+                  <aside className="save-panel">
+                    <ShieldCheck size={24} />
+                    <h3>{t("A contact, on your terms.")}</h3>
+                    <p>
+                      {t(
+                        "Saving keeps this card in this browser. Downloading or sharing creates a contact file without saving it.",
+                      )}
+                    </p>
+                    <button className="primary" onClick={() => void save()}>
+                      <Check size={17} />
+                      {t("Save to My Name Cards")}
+                    </button>
+                    <button onClick={exportOne}>
+                      <Download size={17} />
+                      {t("Download Contact (.vcf)")}
+                    </button>
+                    <button onClick={() => void share()}>
+                      <Share2 size={17} />
+                      {t("Share Contact")}
+                    </button>
+                    <details>
+                      <summary>{t("Contact QR code")}</summary>
+                      <p>
+                        {t(
+                          "Includes full name and selected details. Anyone who scans it can read them.",
+                        )}
+                      </p>
+                      {(["phone", "email", "company"] as const).map((k) => (
+                        <label className="checkbox" key={k}>
+                          <input
+                            type="checkbox"
+                            checked={qrFields[k]}
+                            onChange={(e) => {
+                              setQr("");
+                              setQrFields((v) => ({
+                                ...v,
+                                [k]: e.target.checked,
+                              }));
+                            }}
+                          />
+                          {k}
+                        </label>
+                      ))}
+                      <p aria-label="QR details preview">
+                        {[
+                          draft.name,
+                          qrFields.company ? draft.company : "",
+                          ...(qrFields.phone
+                            ? draft.phones.map((v) => v.value)
+                            : []),
+                          ...(qrFields.email
+                            ? draft.emails.map((v) => v.value)
+                            : []),
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
+                      <button onClick={() => void makeQR()}>
+                        <QrCode size={17} />
+                        {t("Generate QR")}
+                      </button>
+                      {qr && (
+                        <>
+                          <img src={qr} alt="Contact QR code" />
+                          <a
+                            className="button"
+                            href={qr}
+                            download="contact-qr.png"
+                          >
+                            {t("Download QR")}
+                          </a>
+                        </>
+                      )}
+                    </details>
+                    <small>
+                      {t(
+                        "Your device controls importing the downloaded file into contacts.",
+                      )}
+                    </small>
+                  </aside>
+                </div>
+              </section>
+            )}
+            {page === "cards" && (
+              <section className="panel">
+                <div className="section-heading">
+                  <div>
+                    <div className="eyebrow">{t("YOUR CONNECTIONS")}</div>
+                    <h1>
+                      {t("My Name Cards")}{" "}
+                      <span className="number">{cards.length}</span>
+                    </h1>
+                  </div>
+                  <button className="primary" onClick={start}>
+                    <Plus size={18} />
+                    {t("Scan a card")}
+                  </button>
+                </div>
+                <p className="storage-reminder">
+                  {t(
+                    "Cards are stored in this browser on this device. Clearing browser data or losing your device may remove them. Export a backup to keep a copy.",
+                  )}
+                </p>
+                <div className="toolbar">
+                  <label className="search">
+                    <Search size={18} />
+                    <input
+                      aria-label="Search your cards"
+                      placeholder={t("Search your cards")}
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                    />
+                  </label>
+                  <select
+                    aria-label="Sort cards"
+                    value={sort}
+                    onChange={(e) => setSort(e.target.value)}
+                  >
+                    <option value="recent">{t("Recently added")}</option>
+                    <option value="name">{t("Name")}</option>
+                  </select>
+                </div>
+                {!cards.length ? (
+                  <div className="empty">
+                    <ContactRound size={52} />
+                    <h2>{t("Your next connection starts here.")}</h2>
+                    <p>{t("Scan a card or enter the details yourself.")}</p>
+                    <button className="primary" onClick={start}>
+                      {t("Scan a Name Card")}
+                      <ArrowRight size={17} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="contact-list">
+                    {visible.map((c) => (
+                      <article className="contact-item" key={c.id}>
+                        <button
+                          className="contact-open"
+                          onClick={() => edit(c)}
+                        >
+                          <span className="avatar">
+                            {c.name.slice(0, 2).toUpperCase() || "SC"}
+                          </span>
+                          <span>
+                            <strong>{c.name || c.company || "Contact"}</strong>
+                            <small>
+                              {c.company ||
+                                c.emails[0]?.value ||
+                                c.phones[0]?.value}
+                            </small>
+                          </span>
+                          <ArrowRight size={18} />
+                        </button>
+                        <button
+                          aria-label={`Download ${c.name}`}
+                          onClick={() =>
+                            download(toVCard(c), contactFilename(c))
+                          }
+                        >
+                          <Download size={17} />
+                        </button>
+                        <button
+                          aria-label={`Delete ${c.name}`}
+                          onClick={async () => {
+                            if (confirm(`Delete ${c.name || "this card"}?`)) {
+                              try {
+                                await db.cards.delete(c.id);
+                                await refresh();
+                              } catch {
+                                setMessage(
+                                  "Could not delete this card. Try again.",
+                                );
+                              }
+                            }
+                          }}
+                        >
+                          <Trash2 size={17} />
+                        </button>
+                      </article>
+                    ))}
+                  </div>
+                )}
+                <div className="button-row export-row">
+                  <button
+                    disabled={!cards.length}
+                    onClick={async () => {
+                      try {
+                        download(
+                          await exportVCardsAsync(cards),
+                          "starry-contacts.vcf",
+                        );
+                      } catch (e) {
+                        setMessage((e as Error).message);
+                      }
+                    }}
+                  >
+                    <Download size={17} />
+                    {t("Export all contacts")}
+                  </button>
+                  <button
+                    disabled={!cards.length}
+                    onClick={async () => {
+                      if (
+                        confirm(
+                          "This JSON backup is unencrypted and contains contact details. Continue?",
+                        )
+                      ) {
+                        const include = confirm(
+                          "Include retained card photos in this backup? Cancel exports contact data only.",
+                        );
+                        try {
+                          download(
+                            await createBackupAsync(cards, include),
+                            "starry-backup.json",
+                            "application/json",
+                          );
+                        } catch (e) {
+                          setMessage((e as Error).message);
+                        }
+                      }
+                    }}
+                  >
+                    <FileText size={17} />
+                    {t("Export JSON backup")}
+                  </button>
+                  <button onClick={() => importRef.current?.click()}>
+                    <Upload size={17} />
+                    {t("Restore backup")}
+                  </button>
+                  <input
+                    hidden
+                    ref={importRef}
+                    type="file"
+                    accept=".json,application/json"
+                    onChange={(e) => {
+                      void importFile(e.target.files?.[0]);
+                      e.target.value = "";
+                    }}
+                  />
+                </div>
+                <small>
+                  {t(
+                    "VCF exports contacts. JSON backups restore your app collection.",
+                  )}
+                </small>
+              </section>
+            )}
+            {page === "settings" && (
+              <section className="panel prose">
+                <h1>{t("Settings")}</h1>
+                <h2>{t("Offline access")}</h2>
+                <p>
+                  {online
+                    ? "Your device is online."
+                    : "Your device is offline."}{" "}
+                  Offline readiness depends on cached app files and the selected
+                  OCR pack.
+                </p>
+                <label>
+                  {t("Recognition language")}
+                  <select
+                    value={ocrLanguage}
+                    onChange={(e) => {
+                      setOcrLanguage(e.target.value as typeof ocrLanguage);
+                      setOffline(false);
+                    }}
+                  >
+                    <option value="eng">{t("English")}</option>
+                    <option value="mya">
+                      {t("Myanmar \u2014 experimental")}
+                    </option>
+                    <option value="eng+mya">
+                      {t("English + Myanmar \u2014 experimental")}
+                    </option>
+                  </select>
+                </label>
+                <button
+                  className="primary"
+                  disabled={busy}
+                  onClick={() => void prepare()}
+                >
+                  <Download size={18} />
+                  {busy ? "Preparing…" : "Download / verify offline assets"}
+                </button>
+                {busy && <progress value={progress} max={1} />}
+                <p>{packInfo}</p>
+                <p role="status">{t(packStatus)}</p>
+                <button
+                  onClick={async () => {
+                    const m = offlineTools;
+                    await m.removeMyanmar();
+                    await checkOffline();
+                    setPackStatus("Optional Myanmar pack removed.");
+                  }}
+                >
+                  {t("Remove Myanmar pack")}
+                </button>
+                <p>
+                  {t(
+                    "Downloads come from this app\u2019s host. Myanmar OCR accuracy is experimental. Interface language does not change OCR recognition.",
+                  )}
+                </p>
+                <h2>{t("Language")}</h2>
+                <p>
+                  {t(
+                    "Use the language switch at the top. Myanmar translations are a draft and need human review. Some detailed instructions remain in English.",
+                  )}
+                </p>
+                <h2>{t("Browser storage")}</h2>
+                <button
+                  onClick={async () =>
+                    setMessage(
+                      (await navigator.storage?.persist?.())
+                        ? "Persistent storage granted. Backups are still recommended."
+                        : "Persistent storage was not granted or is unsupported. Export backups regularly.",
+                    )
+                  }
+                >
+                  {t("Request persistent storage")}
+                </button>
+                <button
+                  className="danger"
+                  onClick={async () => {
+                    if (
+                      confirm(
+                        "Delete all saved cards and local app data? Exported or shared files will not be deleted.",
+                      )
+                    ) {
+                      try {
+                        await db.cards.clear();
+                        setDraft(emptyContact());
+                        setImages([]);
+                        cancelOCR();
+                        try {
+                          localStorage.removeItem("starry-ui");
+                        } catch {
+                          /* Storage may be restricted. */
+                        }
+                        const keys =
+                          "caches" in window ? await caches.keys() : [];
+                        await Promise.all(
+                          keys
+                            .filter((k) =>
+                              k.startsWith(
+                                `starry-${new URL(import.meta.env.BASE_URL, location.href).href}`,
+                              ),
+                            )
+                            .map((k) => caches.delete(k)),
+                        );
+                        await refresh();
+                        setOffline(false);
+                        setMessage("Local cards and cached assets deleted.");
+                      } catch {
+                        setMessage(
+                          "Could not delete all local data. Please retry or use your browser’s site-data settings.",
+                        );
+                      }
+                    }
+                  }}
+                >
+                  <Trash2 size={16} />
+                  {t("Delete all local data")}
+                </button>
+              </section>
+            )}
+            {(page === "privacy" || page === "help") && (
+              <section className="panel prose">
+                <h1>
+                  {page === "privacy"
+                    ? "Your connections. Your privacy."
+                    : "A little help getting started."}
+                </h1>
+                {page === "privacy" ? (
+                  <>
+                    <p>
+                      {t(
+                        "Your card photos and contact details stay on your device unless you choose to export or share them.",
+                      )}
+                    </p>
+                    <h2>{t("Local from photo to contact")}</h2>
+                    <p>
+                      {t(
+                        "OCR runs on your device. We do not use cloud OCR, accounts, analytics, advertising, tracking pixels, or telemetry. The hosting provider may keep ordinary access logs when the app and OCR assets are downloaded online.",
+                      )}
+                    </p>
+                    <h2>{t("Your browser is not a permanent backup")}</h2>
+                    <p>
+                      {t(
+                        "Cards are stored in IndexedDB in this browser. Clearing browser data, private browsing, storage eviction, or losing your device may remove them. Data and backups are not encrypted by this app. Same-origin application code can access stored data.",
+                      )}
+                    </p>
+                    <h2>{t("You choose what leaves")}</h2>
+                    <p>
+                      {t(
+                        "Contact downloads, QR codes, JSON backups, and sharing include the details you choose. Store exported files carefully. Deleting local data does not delete files you already exported or shared.",
+                      )}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <h2>{t("1. Take a clear photo")}</h2>
+                    <p>
+                      {t(
+                        "Keep all card text visible in even lighting. Add the back if it contains more details. Rotate or crop the photo before reading it.",
+                      )}
+                    </p>
+                    <h2>{t("2. Check every detail")}</h2>
+                    <p>
+                      {t(
+                        "OCR can make mistakes, especially on Myanmar and mixed-language cards. Names and job titles are not guessed. Enter uncertain fields manually. Full names are preserved without assuming Western name order.",
+                      )}
+                    </p>
+                    <h2>{t("3. Save or export")}</h2>
+                    <p>
+                      {t(
+                        "Save keeps a card in this browser only. Download a VCF and open it on your phone to import the contact. Your operating system controls the import.",
+                      )}
+                    </p>
+                    <h2>{t("Prepare before going offline")}</h2>
+                    <p>
+                      {t(
+                        "Open Settings and download the selected language pack while online. If an offline model is missing, use manual entry. Export a JSON backup regularly to restore your collection later.",
+                      )}
+                    </p>
+                  </>
+                )}
+              </section>
+            )}
+          </>
+        )}
+      </main>
+      <footer>
+        <span>
+          A free community project by <strong>STARRY Solutions</strong>
+        </span>
+        <nav>
+          <button
+            onClick={() => {
+              void checkOffline();
+              go("settings");
+            }}
+          >
+            {t("Settings")}
+          </button>
+          <button onClick={() => go("privacy")}>{t("Privacy")}</button>
+          <button onClick={() => go("help")}>{t("Help")}</button>
+          {import.meta.env.VITE_SOURCE_URL && (
+            <a
+              href={import.meta.env.VITE_SOURCE_URL}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {t("Source code \u2197")}
+            </a>
+          )}
+        </nav>
+      </footer>
+      {duplicates.length > 0 && (
+        <div className="modal-backdrop">
+          <section
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="duplicate-title"
+          >
+            <h2 id="duplicate-title">{t("A familiar connection?")}</h2>
+            <p>
+              {t(
+                "A phone number or email matches an existing card. Nothing has been overwritten.",
+              )}
+            </p>
+            {duplicates.map((c) => (
+              <div key={c.id}>
+                <strong>{c.name || c.company}</strong>
+                <p>{c.emails.map((e) => e.value).join(", ")}</p>
+                <button
+                  onClick={() => {
+                    setDuplicates([]);
+                    edit(c);
+                  }}
+                >
+                  {t("Review existing card")}
+                </button>
+                <button
+                  onClick={() => {
+                    const merged = {
+                      ...draft,
+                      id: c.id,
+                      createdAt: c.createdAt,
+                    };
+                    for (const key of [
+                      "name",
+                      "givenName",
+                      "familyName",
+                      "company",
+                      "title",
+                      "address",
+                      "notes",
+                    ] as const) {
+                      if (c[key] && draft[key] && c[key] !== draft[key])
+                        merged[key] = confirm(
+                          `${key}: keep new value “${draft[key]}”? Cancel keeps “${c[key]}”.`,
+                        )
+                          ? draft[key]
+                          : c[key];
+                      else merged[key] = draft[key] || c[key];
+                    }
+                    merged.phones = [
+                      ...c.phones,
+                      ...draft.phones.filter(
+                        (p) => !c.phones.some((q) => q.value === p.value),
+                      ),
+                    ];
+                    merged.emails = [
+                      ...c.emails,
+                      ...draft.emails.filter(
+                        (p) => !c.emails.some((q) => q.value === p.value),
+                      ),
+                    ];
+                    merged.websites = Array.from(
+                      new Set([...c.websites, ...draft.websites]),
+                    );
+                    merged.rawText = [c.rawText, draft.rawText]
+                      .filter(Boolean)
+                      .join("\n");
+                    setImages((prev) =>
+                      Array.from(new Set([...(c.photos || []), ...prev])).slice(
+                        0,
+                        2,
+                      ),
+                    );
+                    setRetain(retain || !!c.photos?.length);
+                    setDraft(merged);
+                    setDuplicates([]);
+                    setMessage(
+                      "Merged details are ready for review. Save to apply the merge.",
+                    );
+                  }}
+                >
+                  {t("Merge and review conflicts")}
+                </button>
+              </div>
+            ))}
+            <div className="button-row">
+              <button className="primary" onClick={() => void save(true)}>
+                {t("Save separately")}
+              </button>
+              <button onClick={() => setDuplicates([])}>{t("Cancel")}</button>
+            </div>
+          </section>
+        </div>
+      )}
+      {imported && (
+        <div className="modal-backdrop">
+          <section
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="restore-title"
+          >
+            <h2 id="restore-title">Restore {imported.length} cards?</h2>
+            <p>
+              {t(
+                "Existing cards remain. Possible duplicates will be reviewed before import.",
+              )}
+            </p>
+            <ul>
+              {imported.slice(0, 20).map((c) => (
+                <li key={c.id}>{c.name || c.company || "Contact"}</li>
+              ))}
+            </ul>
+            <div className="button-row">
+              <button className="primary" onClick={() => void restore()}>
+                {t("Restore cards")}
+              </button>
+              <button onClick={() => setImported(null)}>{t("Cancel")}</button>
+            </div>
+          </section>
+        </div>
+      )}
+      {cropIndex !== null && (
+        <div className="modal-backdrop">
+          <section
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="crop-title"
+          >
+            <h2 id="crop-title">{t("Crop card")}</h2>
+            <div className="crop-preview">
+              <img src={images[cropIndex]} alt="Crop preview" />
+              <div
+                style={{
+                  left: `${crop.x}%`,
+                  top: `${crop.y}%`,
+                  width: `${crop.w}%`,
+                  height: `${crop.h}%`,
+                }}
+              />
+            </div>
+            {(["x", "y", "w", "h"] as const).map((k) => (
+              <label key={k}>
+                {{ x: "Left", y: "Top", w: "Width", h: "Height" }[k]} (%)
+                <input
+                  type="range"
+                  min={k === "w" || k === "h" ? 10 : 0}
+                  max={
+                    k === "x"
+                      ? 100 - crop.w
+                      : k === "y"
+                        ? 100 - crop.h
+                        : k === "w"
+                          ? 100 - crop.x
+                          : 100 - crop.y
+                  }
+                  value={crop[k]}
+                  onChange={(e) =>
+                    setCrop((v) => ({ ...v, [k]: Number(e.target.value) }))
+                  }
+                />
+              </label>
+            ))}
+            <div className="button-row">
+              <button
+                className="primary"
+                onClick={async () => {
+                  const next = await transformImage(
+                    images[cropIndex],
+                    false,
+                    crop,
+                  );
+                  setImages((v) =>
+                    v.map((s, i) => (i === cropIndex ? next : s)),
+                  );
+                  setCropIndex(null);
+                }}
+              >
+                {t("Apply crop")}
+              </button>
+              <button onClick={() => setCropIndex(null)}>{t("Cancel")}</button>
+            </div>
+          </section>
+        </div>
+      )}
+    </div>
+  );
+}
