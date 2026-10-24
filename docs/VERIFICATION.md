@@ -11,7 +11,7 @@ Date: 24 October 2026. Environment: macOS ARM64, Node.js 22.21.1, Playwright 1.6
 | `npm run format:check` | Passed |
 | `npm test` | 29 tests passed across six files |
 | `npm run build` | Passed; static output in `dist/` |
-| `npm run test:e2e` | Thirteen browser scenarios passed |
+| `npm run test:e2e` | Fourteen browser scenarios passed |
 | `npm run test:subpath` | Passed at `/name-cards/`; offline launch, asset preparation and local save |
 | `npm audit` | Zero known vulnerabilities reported at verification time |
 
@@ -32,9 +32,8 @@ Reviewed the home screen at 390 px and 1440 px widths. The narrow layout has no 
 - Representative Myanmar and mixed-language cards. Myanmar OCR remains experimental.
 - Native-speaker review of draft Myanmar UI copy; some generated status/conflict messages use English fallback.
 - Larger real-world accuracy and performance evaluation on lower-memory phones.
-- Configure the actual public source repository URL and GitHub security/reporting settings before publication.
 
-See `QA_CHECKLIST.md` for the device checklist. No public deployment or remote repository publication was performed.
+See `QA_CHECKLIST.md` for the device checklist. The source repository is now public at https://github.com/ChanMyaeLwin/starry-name-cards, with private vulnerability reporting enabled. No production deployment has been performed.
 
 ## Implementation references
 
@@ -76,3 +75,7 @@ In-app confirmations now share the notice popup design. Clear-data, individual d
 Back within the app keeps normal screen history. At the initial app boundary, a Stay / Exit popup protects against accidental exit. Browser coverage verifies Stay, Exit to a previous external page, and reloads without accumulating extra history entries. A simulated no-history/browser-close refusal checks the manual-exit fallback. Physical-device Back gestures and installed-PWA window closing still need device verification.
 
 The header, collection illustration icon, empty collection, install panel and popups share `public/icon.svg`, the current favicon artwork. Existing PNG PWA and Apple home-screen assets use the same design. Mobile popup appearance was visually reviewed at 390 px width.
+
+## About and community links
+
+The install icon and heading share one row at mobile and desktop widths. More links to an addressable About page (`/#/about`) explaining the community purpose, local processing and ways to contribute. STARRY Solutions links to its website, and More/About link to the public GitHub repository. Route reload, active navigation and destination URLs are checked in the browser suite.

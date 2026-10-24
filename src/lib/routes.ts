@@ -6,6 +6,7 @@ export type Page =
   | "settings"
   | "privacy"
   | "help"
+  | "about"
   | "more"
   | "profile"
   | "notfound";
@@ -19,6 +20,7 @@ const paths: Record<Page, string> = {
   privacy: "/privacy",
   help: "/help",
   more: "/more",
+  about: "/about",
   profile: "/profile",
   notfound: "/not-found",
 };

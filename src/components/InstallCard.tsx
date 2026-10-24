@@ -19,8 +19,10 @@ export default function InstallCard({
       className="settings-card install-guide"
       aria-labelledby="install-title"
     >
-      <BrandIcon size={48} />
-      <h2 id="install-title">{t("Keep STARRY on your home screen")}</h2>
+      <div className="inline-brand-heading">
+        <BrandIcon size={48} />
+        <h2 id="install-title">{t("Keep STARRY on your home screen")}</h2>
+      </div>
       <p>{t("Open your connections with one tap, like any other app.")}</p>
       {installation.installed ? (
         <p className="installed-state">

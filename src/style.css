@@ -1390,3 +1390,17 @@ html[lang="my"] .action-card {
     height: 38px;
   }
 }
+
+.inline-brand-heading {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.inline-brand-heading h1,
+.inline-brand-heading h2 {
+  margin: 0;
+  min-width: 0;
+}
+.about-page .settings-card {
+  margin-top: 20px;
+}

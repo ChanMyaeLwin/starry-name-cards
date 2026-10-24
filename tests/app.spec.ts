@@ -608,3 +608,44 @@ test("exit explains how to leave when the browser refuses to close", async ({
     "Your browser cannot close this app automatically.",
   );
 });
+
+test("More links to About and the public repository with an inline install heading", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/#/more");
+  await expect(
+    page.getByRole("link", { name: "GitHub repository", exact: true }),
+  ).toHaveAttribute(
+    "href",
+    "https://github.com/ChanMyaeLwin/starry-name-cards",
+  );
+  await expect(
+    page.getByRole("link", { name: "STARRY Solutions", exact: true }),
+  ).toHaveAttribute("href", "https://starrymm.com");
+  const heading = await page
+    .locator(".install-guide .inline-brand-heading")
+    .boundingBox();
+  const icon = await page.locator(".install-guide .brand-icon").boundingBox();
+  const title = await page.locator("#install-title").boundingBox();
+  expect(
+    heading && icon && title && icon.x + icon.width <= title.x,
+  ).toBeTruthy();
+  await page.getByRole("link", { name: /About Our purpose/ }).click();
+  await expect(page).toHaveURL(/#\/about$/);
+  await expect(
+    page.getByRole("heading", { name: "Why we created this app" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "More", exact: true }),
+  ).toHaveAttribute("aria-current", "page");
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "About STARRY Name Cards" }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+});

@@ -9,7 +9,7 @@ export default function AppNav({
   go: (p: Page) => void;
   t: (s: string) => string;
 }) {
-  const active = ["profile", "privacy", "help"].includes(page)
+  const active = ["profile", "privacy", "help", "about"].includes(page)
     ? "more"
     : page === "edit"
       ? "cards"

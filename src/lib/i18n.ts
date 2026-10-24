@@ -304,3 +304,11 @@ Object.assign(translations, {
   Exit: "ထွက်ရန်",
   Stay: "ဆက်နေမည်",
 });
+
+Object.assign(translations, {
+  About: "အကြောင်း",
+  "About STARRY Name Cards": "STARRY Name Cards အကြောင်း",
+  "Why we created this app": "ဤအက်ပ်ကို ဖန်တီးရခြင်း ရည်ရွယ်ချက်",
+  "GitHub repository": "GitHub ကုဒ်သိုလှောင်ရာ",
+  "Source code & contributions": "မူရင်းကုဒ်နှင့် ပါဝင်ကူညီမှုများ",
+});

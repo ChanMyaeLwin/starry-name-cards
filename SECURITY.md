@@ -2,7 +2,7 @@
 
 ## Reporting
 
-Do not post exploitable vulnerabilities or real card data in public issues. Once the repository is public, use its private vulnerability reporting feature if enabled, or a maintainer's published private contact channel. Maintainers must configure that channel before public launch; this project does not invent an email address or promise a response time.
+Do not post exploitable vulnerabilities or real card data in public issues. Use [GitHub private vulnerability reporting](https://github.com/ChanMyaeLwin/starry-name-cards/security/advisories/new) to contact the maintainers privately. No response time is promised.
 
 Include affected version/commit, browser/OS, minimal reproduction with fictional data, expected behavior, and the potential impact. Only test against your own data and local instance.
 

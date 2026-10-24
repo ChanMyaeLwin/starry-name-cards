@@ -49,9 +49,9 @@ Storage is separate for each origin: localhost, the network IP and an HTTPS host
 
 ## App navigation
 
-The persistent app navigation contains **Home**, **Connections**, **Settings**, and **More**. More contains Profile, Privacy, Help and installation guidance. The optional local profile needs no account and is excluded from contact backups.
+The persistent app navigation contains **Home**, **Connections**, **Settings**, and **More**. More contains Profile, Privacy, About, Help, the GitHub repository and installation guidance. The optional local profile needs no account and is excluded from contact backups.
 
-Each screen has a distinct URL: `/#/home`, `/#/connections`, `/#/settings`, `/#/more`, `/#/profile`, `/#/privacy`, `/#/help`, `/#/scan` and `/#/review`. Saved connections use `/#/connections/<local-id>`. Hash routes support direct opening, reloads and browser back/forward without static-host rewrite rules, including under a subdirectory and offline. URLs never contain contact details. Unsaved review drafts are not restored after a reload.
+Each screen has a distinct URL: `/#/home`, `/#/connections`, `/#/settings`, `/#/more`, `/#/profile`, `/#/privacy`, `/#/about`, `/#/help`, `/#/scan` and `/#/review`. Saved connections use `/#/connections/<local-id>`. Hash routes support direct opening, reloads and browser back/forward without static-host rewrite rules, including under a subdirectory and offline. URLs never contain contact details. Unsaved review drafts are not restored after a reload.
 
 ## Use
 
@@ -86,7 +86,7 @@ For hosting under a subdirectory, set the build base including trailing slash:
 VITE_BASE_PATH=/name-cards/ npm run build
 ```
 
-Configure the public source link using `VITE_SOURCE_URL` only after a real repository exists. The link stays hidden when unset. Never put secrets in `VITE_*` variables: they are public build inputs. This repository has not been published or deployed by the implementation workflow.
+The public source repository is [ChanMyaeLwin/starry-name-cards](https://github.com/ChanMyaeLwin/starry-name-cards). Forks can override the in-app source link with `VITE_SOURCE_URL`. Never put secrets in `VITE_*` variables: they are public build inputs. The source repository is public. No production site has been deployed.
 
 ## Limitations and release checks
 

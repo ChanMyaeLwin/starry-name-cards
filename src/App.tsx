@@ -1,3 +1,5 @@
+import About from "./components/About";
+import { SOURCE_URL, STARRY_URL } from "./lib/project";
 import BrandIcon from "./components/BrandIcon";
 import { useConfirmation } from "./lib/useConfirmation";
 import MessageDialog from "./components/MessageDialog";
@@ -1291,6 +1293,13 @@ export default function App() {
                         Icon: ShieldCheck,
                       },
                       {
+                        target: "about",
+                        title: "About",
+                        description:
+                          "Our purpose and the people behind the app",
+                        Icon: CircleHelp,
+                      },
+                      {
                         target: "help",
                         title: "Help",
                         description: "A little guidance when you need it",
@@ -1318,18 +1327,25 @@ export default function App() {
                   ))}
                 </div>
                 <InstallCard installation={installation} t={t} />
-                {import.meta.env.VITE_SOURCE_URL && (
+                <section className="settings-card">
+                  <h2>{t("Source code & contributions")}</h2>
+                  <p>
+                    {t(
+                      "Everyone is welcome to contribute code, translations, feedback, and ideas.",
+                    )}
+                  </p>
                   <a
                     className="button"
-                    href={import.meta.env.VITE_SOURCE_URL}
+                    href={SOURCE_URL}
                     target="_blank"
                     rel="noreferrer"
                   >
-                    {t("Source code ↗")}
+                    {t("GitHub repository")}
                   </a>
-                )}
+                </section>
               </section>
             )}
+            {page === "about" && <About t={t} />}
             {page === "profile" && <Profile t={t} onNotice={setMessage} />}
             {page === "notfound" && (
               <section className="panel empty">
@@ -1541,7 +1557,10 @@ export default function App() {
       </main>
       <footer className="app-attribution">
         <span>
-          A free community project by <strong>STARRY Solutions</strong>
+          {t("A free community project by")}{" "}
+          <a href={STARRY_URL} target="_blank" rel="noreferrer">
+            <strong>STARRY Solutions</strong>
+          </a>
         </span>
       </footer>
       <AppNav page={page} go={go} t={t} />
