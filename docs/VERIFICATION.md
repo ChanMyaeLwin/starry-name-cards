@@ -58,3 +58,7 @@ A Chromium smoke test against the host's HTTP LAN address confirmed an insecure 
 Read Card now checks the selected OCR pack before starting recognition. Missing files open a focused download dialog with Download and read, Not now, and manual entry. It shows download progress, retains the selected image, reports failures for retry, and resumes recognition after a successful download. Offline devices receive connection guidance; insecure HTTP previews receive HTTPS/localhost guidance.
 
 The real OCR browser scenario covers dismissing the prompt without losing the image, downloading from the prompt and reading the retained image, then offline recognition and a missing Myanmar pack. Settings remains in primary navigation and was removed from the More menu.
+
+## Combined language download
+
+Offline setup downloads English and Myanmar together without a language selector or a separate Myanmar removal action. The scan screen still lets users choose the recognition language for their card. Browser coverage verifies both packs are installed by the download prompt, then simulates Myanmar cache eviction to check missing-pack guidance.

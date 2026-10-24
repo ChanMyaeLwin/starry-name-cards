@@ -164,9 +164,7 @@ export default function App() {
   async function checkOffline() {
     const m = offlineTools;
     const s = await m.getOfflineStatus();
-    setOffline(
-      s.shell && ocrLanguage.split("+").every((l) => s[l as "eng" | "mya"]),
-    );
+    setOffline(s.shell && s.eng && s.mya);
     setPackInfo(
       `English: ${s.eng ? "installed" : "not installed"} (${(s.englishBytes / 1048576).toFixed(1)} MB). Myanmar: ${s.mya ? "installed" : "not installed"} (+${(s.myanmarBytes / 1048576).toFixed(1)} MB).`,
     );
@@ -481,13 +479,13 @@ export default function App() {
     setPreparing(true);
     try {
       const mod = offlineTools;
-      await mod.prepareLanguage(ocrLanguage, (p: number, s?: string) => {
+      await mod.prepareLanguage("eng+mya", (p: number, s?: string) => {
         setDownloadProgress(p);
         setPackStatus(s || "Preparing offline assets…");
       });
       await checkOffline();
       setPackStatus(
-        "Language downloaded. You can scan with it on this device.",
+        "English and Myanmar downloaded. You can scan with both on this device.",
       );
       return true;
     } catch (e) {
@@ -1282,26 +1280,16 @@ export default function App() {
                     {online
                       ? "Your device is online."
                       : "Your device is offline."}{" "}
-                    Download a language once to scan without internet.
+                    Download English and Myanmar together to scan without
+                    internet.
                   </p>
-                  <label>
-                    {t("Recognition language")}
-                    <select
-                      value={ocrLanguage}
-                      onChange={(e) => {
-                        setOcrLanguage(e.target.value as typeof ocrLanguage);
-                        setOffline(false);
-                      }}
-                    >
-                      <option value="eng">{t("English")}</option>
-                      <option value="mya">
-                        {t("Myanmar \u2014 experimental")}
-                      </option>
-                      <option value="eng+mya">
-                        {t("English + Myanmar \u2014 experimental")}
-                      </option>
-                    </select>
-                  </label>
+                  <p>
+                    <strong>
+                      {t("Recognition languages")}:{" "}
+                      {t("English + Myanmar (experimental)")}
+                    </strong>
+                  </p>
+                  <p>{t("Coming later: Thai, Chinese, and Japanese.")}</p>
                   <button
                     className="primary"
                     disabled={preparing}
@@ -1313,16 +1301,6 @@ export default function App() {
                   {preparing && <progress value={downloadProgress} max={1} />}
                   <p>{packInfo}</p>
                   <p role="status">{t(packStatus)}</p>
-                  <button
-                    onClick={async () => {
-                      const m = offlineTools;
-                      await m.removeMyanmar();
-                      await checkOffline();
-                      setPackStatus("Optional Myanmar pack removed.");
-                    }}
-                  >
-                    {t("Remove Myanmar pack")}
-                  </button>
                   <p>
                     {t(
                       "Downloads come from this app\u2019s host. Myanmar OCR accuracy is experimental. Interface language does not change OCR recognition.",
@@ -1500,7 +1478,7 @@ export default function App() {
             </h2>
             <p id="ocr-download-description">
               {t(
-                "The selected recognition language is not downloaded yet. Download it once to read cards on this device. Your photo stays on your device.",
+                "The selected recognition language is not downloaded yet. Download English and Myanmar together to read cards on this device. Your photo stays on your device.",
               )}
             </p>
             <p>
@@ -1517,7 +1495,7 @@ export default function App() {
             </p>
             <p>
               {t(
-                "The first download is about 47 MB, plus 4.4 MB for Myanmar. Keep this screen open while it downloads.",
+                "English and Myanmar are included in the download (about 51 MB). Keep this screen open while it downloads.",
               )}
             </p>
             {!window.isSecureContext ? (

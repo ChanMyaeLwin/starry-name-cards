@@ -134,6 +134,12 @@ test("real local OCR offline and missing pack fallback", async ({
   );
   page.once("dialog", (dialog) => dialog.accept());
   await page.getByRole("link", { name: "Settings", exact: true }).click();
+  await expect(
+    page.getByText("Myanmar: installed", { exact: false }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("combobox", { name: "Recognition language", exact: true }),
+  ).toHaveCount(0);
   await context.setOffline(true);
   await page.reload();
   await expect(
@@ -187,6 +193,17 @@ test("real local OCR offline and missing pack fallback", async ({
       mimeType: "image/png",
       buffer: Buffer.from(bytes, "base64"),
     });
+  // Both packs were installed together; simulate browser eviction of Myanmar.
+  await page.evaluate(async () => {
+    const names = await caches.keys();
+    for (const name of names) {
+      const cache = await caches.open(name);
+      for (const request of await cache.keys()) {
+        if (request.url.endsWith("/lang/mya.traineddata"))
+          await cache.delete(request);
+      }
+    }
+  });
   await page.getByLabel("OCR recognition language").selectOption("mya");
   await page.getByRole("button", { name: "Read Card", exact: true }).click();
   await expect(

@@ -56,7 +56,7 @@ Each screen has a distinct URL: `/#/home`, `/#/connections`, `/#/settings`, `/#/
 ## Use
 
 1. Choose **Scan a Name Card** and take or choose a photo, or enter details manually.
-2. Select the OCR recognition language independently of the interface language. Download/prepare its assets while online.
+2. Select the OCR recognition language independently of the interface language. Download English and Myanmar together while online.
 3. Read the card, then correct the suggested fields. OCR and field assignment can be wrong; no missing information is invented.
 4. **Save to My Name Cards** stores a record in this browser. Photo retention is optional and off by default.
 5. **Download Contact (.vcf)** exports a contact without implicitly saving it. **Share Contact** uses supported device sharing, with a download fallback. Your operating system controls contact import.
@@ -65,7 +65,7 @@ VCF files use UTF-8 vCard 3.0. Full names are kept intact; structured given/fami
 
 ## Offline and storage
 
-Prepare the app and selected OCR pack online before going offline. The connection indicator and verified offline-readiness status mean different things. A missing model prevents that language's OCR, but manual entry remains available. Browser eviction, private browsing, or clearing site data can remove downloaded assets and saved contacts.
+Prepare the app and both OCR language packs online before going offline. The connection indicator and verified offline-readiness status mean different things. A missing model prevents that language's OCR, but manual entry remains available. Browser eviction, private browsing, or clearing site data can remove downloaded assets and saved contacts.
 
 Cards are stored in IndexedDB on the current browser/device. They do not sync. Retained photos increase storage use. Export backups regularly; browser storage is not a permanent backup. Deleting local data does not delete exported/shared files. Updates should be activated when you are ready, after saving or exporting edits.
 

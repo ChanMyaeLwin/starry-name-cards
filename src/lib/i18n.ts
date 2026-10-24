@@ -285,3 +285,9 @@ Object.assign(translations, {
   "Not now": "ယခု မလုပ်သေးပါ",
   "Downloading…": "ဒေါင်းလုဒ်လုပ်နေသည်…",
 });
+
+Object.assign(translations, {
+  "Recognition languages": "စာသားဖတ်ရန် ဘာသာစကားများ",
+  "Coming later: Thai, Chinese, and Japanese.":
+    "နောက်ပိုင်းတွင် ထိုင်း၊ တရုတ်နှင့် ဂျပန်ဘာသာစကားများ ပါဝင်လာမည်။",
+});

@@ -33,7 +33,7 @@ try {
   await page.getByRole("link", { name: "Settings", exact: true }).click();
   await page.getByRole("button", { name: "Download for offline use" }).click();
   await page
-    .getByText("Language downloaded.", { exact: false })
+    .getByText("English and Myanmar downloaded.", { exact: false })
     .waitFor({ timeout: 60000 });
   await context.setOffline(true);
   await page.reload();
