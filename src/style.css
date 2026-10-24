@@ -1404,3 +1404,16 @@ html[lang="my"] .action-card {
 .about-page .settings-card {
   margin-top: 20px;
 }
+
+.company-logo-link {
+  display: block;
+  width: min(100%, 360px);
+  margin: 24px auto 16px;
+  border-radius: 16px;
+  overflow: hidden;
+}
+.company-logo {
+  display: block;
+  width: 100%;
+  height: auto;
+}

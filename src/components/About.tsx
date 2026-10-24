@@ -8,6 +8,20 @@ export default function About({ t }: { t: (text: string) => string }) {
         <BrandIcon size={48} />
         <h1>{t("About STARRY Name Cards")}</h1>
       </div>
+      <a
+        className="company-logo-link"
+        href={STARRY_URL}
+        target="_blank"
+        rel="noreferrer"
+      >
+        <img
+          className="company-logo"
+          src={`${import.meta.env.BASE_URL}starry-solutions-logo.png`}
+          alt="STARRY Solutions — Work with Heart & Empathy"
+          width="1434"
+          height="1097"
+        />
+      </a>
       <p>
         {t("A free community project by")}{" "}
         <a href={STARRY_URL} target="_blank" rel="noreferrer">
