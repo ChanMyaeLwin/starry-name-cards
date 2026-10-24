@@ -1,7 +1,13 @@
 import { useState } from "react";
 import { UserRound, Check } from "lucide-react";
 export const PROFILE_KEY = "starry-local-profile";
-export default function Profile({ t }: { t: (s: string) => string }) {
+export default function Profile({
+  t,
+  onNotice,
+}: {
+  t: (s: string) => string;
+  onNotice: (message: string) => void;
+}) {
   const [profile, setProfile] = useState(() => {
     try {
       const p = JSON.parse(localStorage.getItem(PROFILE_KEY) || "{}");
@@ -13,7 +19,6 @@ export default function Profile({ t }: { t: (s: string) => string }) {
       return { name: "", bio: "" };
     }
   });
-  const [status, setStatus] = useState("");
   return (
     <section className="panel profile-page">
       <div className="page-intro">
@@ -29,9 +34,9 @@ export default function Profile({ t }: { t: (s: string) => string }) {
           e.preventDefault();
           try {
             localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
-            setStatus(t("Profile saved on this device."));
+            onNotice(t("Profile saved on this device."));
           } catch {
-            setStatus(
+            onNotice(
               t(
                 "Could not save your profile. Browser storage may be unavailable.",
               ),
@@ -62,9 +67,6 @@ export default function Profile({ t }: { t: (s: string) => string }) {
           <Check size={17} />
           {t("Save profile")}
         </button>
-        <p className="form-status" role="status">
-          {status}
-        </p>
       </form>
       <p className="profile-note">
         {t(

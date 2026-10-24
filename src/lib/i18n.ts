@@ -291,3 +291,5 @@ Object.assign(translations, {
   "Coming later: Thai, Chinese, and Japanese.":
     "နောက်ပိုင်းတွင် ထိုင်း၊ တရုတ်နှင့် ဂျပန်ဘာသာစကားများ ပါဝင်လာမည်။",
 });
+
+Object.assign(translations, { Notice: "အသိပေးချက်", OK: "အိုကေ" });

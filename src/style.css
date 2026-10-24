@@ -1358,3 +1358,15 @@ html[lang="my"] .action-card {
 .install-guide .button-row {
   margin: 14px 0;
 }
+
+.message-dialog {
+  border: 0;
+  margin: auto;
+}
+.message-dialog::backdrop {
+  background: #14223c70;
+  backdrop-filter: blur(4px);
+}
+.message-dialog .primary {
+  width: 100%;
+}

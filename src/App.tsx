@@ -1,3 +1,4 @@
+import MessageDialog from "./components/MessageDialog";
 import InstallCard from "./components/InstallCard";
 import { useInstall } from "./lib/useInstall";
 import { localId } from "./lib/id";
@@ -107,6 +108,7 @@ export default function App() {
     [packStatus, setPackStatus] = useState(""),
     [update, setUpdate] = useState<ServiceWorker | null>(null);
   useEffect(() => {
+    if (message) return;
     const dialog = document.querySelector<HTMLElement>("[role=dialog]");
     if (!dialog) return;
     const previous = document.activeElement as HTMLElement;
@@ -143,7 +145,7 @@ export default function App() {
       document.removeEventListener("keydown", key);
       previous?.focus();
     };
-  }, [duplicates.length, imported, cropIndex, ocrDownload]);
+  }, [duplicates.length, imported, cropIndex, ocrDownload, message]);
   const fileRef = useRef<HTMLInputElement>(null),
     cameraRef = useRef<HTMLInputElement>(null),
     importRef = useRef<HTMLInputElement>(null),
@@ -159,6 +161,9 @@ export default function App() {
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [page]);
+  useEffect(() => {
+    if (installation.message) setMessage(installation.message);
+  }, [installation.message]);
   const t = (text: string) =>
     language === "my" ? translations[text] || text : text;
   async function checkOffline() {
@@ -487,10 +492,15 @@ export default function App() {
       setPackStatus(
         "English and Myanmar downloaded. You can scan with both on this device.",
       );
+      if (!ocrDownload)
+        setMessage(
+          "English and Myanmar downloaded. You can scan with both on this device.",
+        );
       return true;
     } catch (e) {
       setOffline(false);
       setPackStatus((e as Error).message);
+      if (!ocrDownload) setMessage((e as Error).message);
       return false;
     } finally {
       setPreparing(false);
@@ -556,14 +566,6 @@ export default function App() {
         </div>
       </header>
       <main>
-        {message && (
-          <div className="notice" role="status">
-            {t(message)}
-            <button aria-label="Dismiss message" onClick={() => setMessage("")}>
-              <X size={16} />
-            </button>
-          </div>
-        )}
         {update && (
           <div className="notice">
             {t("Update available. Save your work before updating.")}
@@ -1256,7 +1258,7 @@ export default function App() {
                 )}
               </section>
             )}
-            {page === "profile" && <Profile t={t} />}
+            {page === "profile" && <Profile t={t} onNotice={setMessage} />}
             {page === "notfound" && (
               <section className="panel empty">
                 <h1>{t("Page not found")}</h1>
@@ -1471,6 +1473,9 @@ export default function App() {
         </span>
       </footer>
       <AppNav page={page} go={go} t={t} />
+      {message && (
+        <MessageDialog message={message} onClose={() => setMessage("")} t={t} />
+      )}
       {ocrDownload && (
         <div className="modal-backdrop">
           <section

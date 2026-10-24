@@ -52,7 +52,6 @@ export default function InstallCard({
           </button>
         </div>
       )}
-      {installation.message && <p role="status">{t(installation.message)}</p>}
       {directions && !installation.installed && (
         <div id="install-directions" className="install-directions">
           {!window.isSecureContext && (

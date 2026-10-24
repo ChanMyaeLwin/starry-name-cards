@@ -1,4 +1,12 @@
 import { test, expect, type Page } from "@playwright/test";
+test.beforeEach(async ({ page }) => {
+  await page.addLocatorHandler(
+    page.getByRole("alertdialog"),
+    async (dialog) => {
+      await dialog.getByRole("button", { name: "OK", exact: true }).click();
+    },
+  );
+});
 async function manual(page: Page, name = "Alex Example") {
   await page
     .getByRole("button", { name: "Scan a Name Card", exact: false })
@@ -53,6 +61,7 @@ test("download/share does not save and unsafe text remains text", async ({
   page,
 }) => {
   await page.goto("/");
+  await page.removeLocatorHandler(page.getByRole("alertdialog"));
   await manual(page, "<img src=x onerror=alert(1)>");
   await page.evaluate(() =>
     Object.defineProperty(navigator, "canShare", {
@@ -66,6 +75,10 @@ test("download/share does not save and unsafe text remains text", async ({
     .click();
   await dl;
   await expect(page.getByText("File sharing is unavailable.")).toBeVisible();
+  await page
+    .getByRole("alertdialog")
+    .getByRole("button", { name: "OK", exact: true })
+    .click();
   page.on("dialog", (d) => d.accept());
   await page.getByRole("link", { name: "Home", exact: true }).click();
   await page.getByRole("link", { name: "Connections", exact: true }).click();
@@ -367,6 +380,7 @@ test("app navigation has distinct URLs, history, local profile and reloadable co
 test("install prompt is captured before More opens and used only after a click", async ({
   page,
 }) => {
+  await page.removeLocatorHandler(page.getByRole("alertdialog"));
   await page.goto("/");
   await expect(
     page.getByRole("navigation", { name: "Main navigation" }),
@@ -396,6 +410,10 @@ test("install prompt is captured before More opens and used only after a click",
       "Installation cancelled. You can try again from your browser menu.",
     ),
   ).toBeVisible();
+  await page
+    .getByRole("alertdialog")
+    .getByRole("button", { name: "OK", exact: true })
+    .click();
   expect(await page.locator("html").getAttribute("data-install-calls")).toBe(
     "1",
   );
@@ -441,4 +459,33 @@ test("iPhone install fallback shows Safari directions", async ({ browser }) => {
     ),
   ).toBeVisible();
   await context.close();
+});
+
+test("storage notices use an accessible dismissible popup", async ({
+  page,
+}) => {
+  await page.removeLocatorHandler(page.getByRole("alertdialog"));
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator.storage, "persist", {
+      value: async () => true,
+    });
+  });
+  await page.goto("/#/settings");
+  const request = page.getByRole("button", {
+    name: "Request persistent storage",
+  });
+  await request.click();
+  const notice = page.getByRole("alertdialog", { name: "Notice" });
+  await expect(notice).toHaveText(
+    /Persistent storage granted. Backups are still recommended./,
+  );
+  await expect(
+    notice.getByRole("button", { name: "OK", exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(notice).toHaveCount(0);
+  await expect(request).toBeFocused();
+  await request.click();
+  await notice.getByRole("button", { name: "OK", exact: true }).click();
+  await expect(notice).toHaveCount(0);
 });

@@ -11,7 +11,7 @@ Date: 24 October 2026. Environment: macOS ARM64, Node.js 22.21.1, Playwright 1.6
 | `npm run format:check` | Passed |
 | `npm test` | 29 tests passed across six files |
 | `npm run build` | Passed; static output in `dist/` |
-| `npm run test:e2e` | Nine browser scenarios passed |
+| `npm run test:e2e` | Ten browser scenarios passed |
 | `npm run test:subpath` | Passed at `/name-cards/`; offline launch, asset preparation and local save |
 | `npm audit` | Zero known vulnerabilities reported at verification time |
 
@@ -62,3 +62,7 @@ The real OCR browser scenario covers dismissing the prompt without losing the im
 ## Combined language download
 
 Offline setup downloads English and Myanmar together without a language selector or a separate Myanmar removal action. The scan screen still lets users choose the recognition language for their card. Browser coverage verifies both packs are installed by the download prompt, then simulates Myanmar cache eviction to check missing-pack guidance.
+
+## Notice popups
+
+App notices now use a native modal dialog, including storage requests, save/export feedback, profile saves, installation results and Settings download results. Progress remains inline. Browser coverage checks the storage message, initial button focus, Escape and OK dismissal, and return of focus to the initiating button.
