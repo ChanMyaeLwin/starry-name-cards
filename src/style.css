@@ -1370,3 +1370,8 @@ html[lang="my"] .action-card {
 .message-dialog .primary {
   width: 100%;
 }
+
+.message-dialog .button-row .primary {
+  flex: 1;
+  width: auto;
+}

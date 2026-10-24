@@ -1,39 +1,48 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
 export default function MessageDialog({
   message,
   onClose,
   t,
+  onDismiss,
 }: {
   message: string;
+  onDismiss?: () => void;
   onClose: () => void;
   t: (text: string) => string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const id = useId();
   useEffect(() => {
     const dialog = ref.current;
     if (message && dialog && !dialog.open) dialog.showModal();
   }, [message]);
-  const close = () => {
+  const close = (accept = true) => {
     ref.current?.close();
-    onClose();
+    if (!accept && onDismiss) onDismiss();
+    else onClose();
   };
   return (
     <dialog
       ref={ref}
       className="modal message-dialog"
-      role="alertdialog"
-      aria-labelledby="message-title"
-      aria-describedby="message-body"
+      role={onDismiss ? "dialog" : "alertdialog"}
+      aria-labelledby={`${id}-title`}
+      aria-describedby={`${id}-body`}
       onCancel={(event) => {
         event.preventDefault();
-        close();
+        close(false);
       }}
     >
-      <h2 id="message-title">{t("Notice")}</h2>
-      <p id="message-body">{t(message)}</p>
-      <button className="primary" onClick={close}>
-        {t("OK")}
-      </button>
+      <h2 id={`${id}-title`}>{t(onDismiss ? "Please confirm" : "Notice")}</h2>
+      <p id={`${id}-body`}>{t(message)}</p>
+      <div className="button-row">
+        {onDismiss && (
+          <button onClick={() => close(false)}>{t("Cancel")}</button>
+        )}
+        <button className="primary" onClick={() => close()}>
+          {t(onDismiss ? "Confirm" : "OK")}
+        </button>
+      </div>
     </dialog>
   );
 }

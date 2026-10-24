@@ -293,3 +293,8 @@ Object.assign(translations, {
 });
 
 Object.assign(translations, { Notice: "အသိပေးချက်", OK: "အိုကေ" });
+
+Object.assign(translations, {
+  "Please confirm": "အတည်ပြုပေးပါ",
+  Confirm: "အတည်ပြုရန်",
+});

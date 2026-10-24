@@ -1,3 +1,4 @@
+import { useConfirmation } from "./lib/useConfirmation";
 import MessageDialog from "./components/MessageDialog";
 import InstallCard from "./components/InstallCard";
 import { useInstall } from "./lib/useInstall";
@@ -68,6 +69,8 @@ function download(
 
 export default function App() {
   const installation = useInstall();
+  const confirmation = useConfirmation();
+  const historyPending = useRef(false);
   const [ocrDownload, setOcrDownload] = useState(false);
   const [packInfo, setPackInfo] = useState("");
   const [preparing, setPreparing] = useState(false);
@@ -108,7 +111,7 @@ export default function App() {
     [packStatus, setPackStatus] = useState(""),
     [update, setUpdate] = useState<ServiceWorker | null>(null);
   useEffect(() => {
-    if (message) return;
+    if (message || confirmation.message) return;
     const dialog = document.querySelector<HTMLElement>("[role=dialog]");
     if (!dialog) return;
     const previous = document.activeElement as HTMLElement;
@@ -145,7 +148,14 @@ export default function App() {
       document.removeEventListener("keydown", key);
       previous?.focus();
     };
-  }, [duplicates.length, imported, cropIndex, ocrDownload, message]);
+  }, [
+    duplicates.length,
+    imported,
+    cropIndex,
+    ocrDownload,
+    message,
+    confirmation.message,
+  ]);
   const fileRef = useRef<HTMLInputElement>(null),
     cameraRef = useRef<HTMLInputElement>(null),
     importRef = useRef<HTMLInputElement>(null),
@@ -267,19 +277,27 @@ export default function App() {
     void restoreRoute();
   }, []);
   useEffect(() => {
-    function onHistory() {
-      if (location.hash === currentURL.current) return;
-      if (
-        page === "edit" &&
-        !confirm("Leave this form? Unsaved changes will be lost.")
-      ) {
-        history.pushState(null, "", currentURL.current);
-        return;
+    async function onHistory() {
+      if (historyPending.current) return;
+      historyPending.current = true;
+      try {
+        if (location.hash === currentURL.current) return;
+        if (
+          page === "edit" &&
+          !(await confirmation.ask(
+            "Leave this form? Unsaved changes will be lost.",
+          ))
+        ) {
+          history.pushState(null, "", currentURL.current);
+          return;
+        }
+        cancelled.current = true;
+        cancelOCR();
+        setBusy(false);
+        await restoreRoute();
+      } finally {
+        historyPending.current = false;
       }
-      cancelled.current = true;
-      cancelOCR();
-      setBusy(false);
-      void restoreRoute();
     }
     window.addEventListener("popstate", onHistory);
     window.addEventListener("hashchange", onHistory);
@@ -288,11 +306,13 @@ export default function App() {
       window.removeEventListener("hashchange", onHistory);
     };
   }, [page]);
-  function go(next: Page) {
+  async function go(next: Page) {
     if (
       page === "edit" &&
       next !== "edit" &&
-      !confirm("Leave this form? Unsaved changes will be lost.")
+      !(await confirmation.ask(
+        "Leave this form? Unsaved changes will be lost.",
+      ))
     )
       return false;
     setPage(next);
@@ -301,8 +321,8 @@ export default function App() {
     window.scrollTo(0, 0);
     return true;
   }
-  function start() {
-    if (!go("scan")) return;
+  async function start() {
+    if (!(await go("scan"))) return;
     setDraft(emptyContact());
     setImages([]);
     setRetain(false);
@@ -463,9 +483,9 @@ export default function App() {
         const match = findDuplicates(card, all);
         if (
           match.length &&
-          !confirm(
+          !(await confirmation.ask(
             `Possible duplicate: ${card.name || card.company}. Import as a separate card? Cancel skips this card.`,
-          )
+          ))
         )
           continue;
         all.push({ ...card, id: localId() });
@@ -570,8 +590,12 @@ export default function App() {
           <div className="notice">
             {t("Update available. Save your work before updating.")}
             <button
-              onClick={() => {
-                if (confirm("Reload to update? Unsaved work will be lost.")) {
+              onClick={async () => {
+                if (
+                  await confirmation.ask(
+                    "Reload to update? Unsaved work will be lost.",
+                  )
+                ) {
                   navigator.serviceWorker.addEventListener(
                     "controllerchange",
                     () => location.reload(),
@@ -1113,7 +1137,11 @@ export default function App() {
                         <button
                           aria-label={`Delete ${c.name}`}
                           onClick={async () => {
-                            if (confirm(`Delete ${c.name || "this card"}?`)) {
+                            if (
+                              await confirmation.ask(
+                                `Delete ${c.name || "this card"}?`,
+                              )
+                            ) {
                               try {
                                 await db.cards.delete(c.id);
                                 await refresh();
@@ -1152,11 +1180,11 @@ export default function App() {
                     disabled={!cards.length}
                     onClick={async () => {
                       if (
-                        confirm(
+                        await confirmation.ask(
                           "This JSON backup is unencrypted and contains contact details. Continue?",
                         )
                       ) {
-                        const include = confirm(
+                        const include = await confirmation.ask(
                           "Include retained card photos in this backup? Cancel exports contact data only.",
                         );
                         try {
@@ -1358,7 +1386,7 @@ export default function App() {
                     className="danger"
                     onClick={async () => {
                       if (
-                        confirm(
+                        await confirmation.ask(
                           "Delete all saved cards and local app data? Exported or shared files will not be deleted.",
                         )
                       ) {
@@ -1473,6 +1501,15 @@ export default function App() {
         </span>
       </footer>
       <AppNav page={page} go={go} t={t} />
+      {confirmation.message && (
+        <MessageDialog
+          key={confirmation.id}
+          message={confirmation.message}
+          onClose={() => confirmation.finish(true)}
+          onDismiss={() => confirmation.finish(false)}
+          t={t}
+        />
+      )}
       {message && (
         <MessageDialog message={message} onClose={() => setMessage("")} t={t} />
       )}
@@ -1594,7 +1631,7 @@ export default function App() {
                   {t("Review existing card")}
                 </button>
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     const merged = {
                       ...draft,
                       id: c.id,
@@ -1610,9 +1647,9 @@ export default function App() {
                       "notes",
                     ] as const) {
                       if (c[key] && draft[key] && c[key] !== draft[key])
-                        merged[key] = confirm(
+                        merged[key] = (await confirmation.ask(
                           `${key}: keep new value “${draft[key]}”? Cancel keeps “${c[key]}”.`,
-                        )
+                        ))
                           ? draft[key]
                           : c[key];
                       else merged[key] = draft[key] || c[key];

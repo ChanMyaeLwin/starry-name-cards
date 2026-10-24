@@ -11,7 +11,7 @@ Date: 24 October 2026. Environment: macOS ARM64, Node.js 22.21.1, Playwright 1.6
 | `npm run format:check` | Passed |
 | `npm test` | 29 tests passed across six files |
 | `npm run build` | Passed; static output in `dist/` |
-| `npm run test:e2e` | Ten browser scenarios passed |
+| `npm run test:e2e` | Eleven browser scenarios passed |
 | `npm run test:subpath` | Passed at `/name-cards/`; offline launch, asset preparation and local save |
 | `npm audit` | Zero known vulnerabilities reported at verification time |
 
@@ -66,3 +66,7 @@ Offline setup downloads English and Myanmar together without a language selector
 ## Notice popups
 
 App notices now use a native modal dialog, including storage requests, save/export feedback, profile saves, installation results and Settings download results. Progress remains inline. Browser coverage checks the storage message, initial button focus, Escape and OK dismissal, and return of focus to the initiating button.
+
+## Confirmation popups
+
+In-app confirmations now share the notice popup design. Clear-data, individual deletion, backup choices, duplicate-import/merge decisions, update reloads and navigation away from drafts wait for an explicit answer. Cancel and Escape reject the action. Browser-owned tab-close/reload warnings remain native because browsers do not permit custom beforeunload dialogs. Added browser coverage for cancel/confirm data deletion and cancelling draft navigation.

@@ -1,6 +1,14 @@
 import { test, expect, type Page } from "@playwright/test";
 test.beforeEach(async ({ page }) => {
   await page.addLocatorHandler(
+    page.getByRole("dialog", { name: "Please confirm" }),
+    async (dialog) => {
+      await dialog
+        .getByRole("button", { name: "Confirm", exact: true })
+        .click();
+    },
+  );
+  await page.addLocatorHandler(
     page.getByRole("alertdialog"),
     async (dialog) => {
       await dialog.getByRole("button", { name: "OK", exact: true }).click();
@@ -43,11 +51,26 @@ test("manual contact persists, edits, exports, backs up, restores and deletes", 
   expect((await downloaded).suggestedFilename()).toBe("Alex Updated.vcf");
   await page.getByRole("button", { name: "Save to My Name Cards" }).click();
   page.on("dialog", (d) => d.accept());
+  await page.removeLocatorHandler(
+    page.getByRole("dialog", { name: "Please confirm" }),
+  );
   const backupEvent = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export JSON backup" }).click();
+  await page
+    .getByRole("dialog", { name: "Please confirm" })
+    .getByRole("button", { name: "Confirm", exact: true })
+    .click();
+  await page
+    .getByRole("dialog", { name: "Please confirm" })
+    .getByRole("button", { name: "Confirm", exact: true })
+    .click();
   const backup = await backupEvent;
   const path = await backup.path();
   await page.getByRole("button", { name: "Delete Alex Updated" }).click();
+  await page
+    .getByRole("dialog", { name: "Please confirm" })
+    .getByRole("button", { name: "Confirm", exact: true })
+    .click();
   await expect(
     page.getByText("Your next connection starts here."),
   ).toBeVisible();
@@ -488,4 +511,43 @@ test("storage notices use an accessible dismissible popup", async ({
   await request.click();
   await notice.getByRole("button", { name: "OK", exact: true }).click();
   await expect(notice).toHaveCount(0);
+});
+
+test("confirmation popups protect data and unsaved forms", async ({ page }) => {
+  await page.removeLocatorHandler(
+    page.getByRole("dialog", { name: "Please confirm" }),
+  );
+  await page.goto("/");
+  await manual(page, "Keep Example");
+  await page.getByRole("link", { name: "Home", exact: true }).click();
+  const confirmation = page.getByRole("dialog", { name: "Please confirm" });
+  await expect(
+    confirmation.getByRole("button", { name: "Cancel", exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(page.getByLabel("Full name", { exact: true })).toHaveValue(
+    "Keep Example",
+  );
+  await page.getByRole("button", { name: "Save to My Name Cards" }).click();
+  await page.getByRole("link", { name: "Settings", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Delete all local data", exact: true })
+    .click();
+  await expect(confirmation).toContainText("Delete all saved cards");
+  await confirmation
+    .getByRole("button", { name: "Cancel", exact: true })
+    .click();
+  await page.getByRole("link", { name: "Connections", exact: true }).click();
+  await expect(page.getByText("Keep Example", { exact: true })).toBeVisible();
+  await page.getByRole("link", { name: "Settings", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Delete all local data", exact: true })
+    .click();
+  await confirmation
+    .getByRole("button", { name: "Confirm", exact: true })
+    .click();
+  await page.getByRole("link", { name: "Connections", exact: true }).click();
+  await expect(
+    page.getByText("Your next connection starts here."),
+  ).toBeVisible();
 });
