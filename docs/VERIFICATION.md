@@ -52,3 +52,9 @@ Added persistent Home / Connections / Settings / More navigation, compact settin
 Added a LAN preview command and a guided Add to home screen button. Browser tests simulate the install event lifecycle, verify prompts require a click and are used once, and check Safari directions using an iPhone user agent. These simulations do not establish physical-device installation compatibility.
 
 A Chromium smoke test against the host's HTTP LAN address confirmed an insecure context, manual contact creation, reload persistence and HTTPS installation guidance without page errors. UUID generation also works when `crypto.randomUUID` is unavailable on HTTP. A physical phone connection remains a manual check.
+
+## Read Card download prompt
+
+Read Card now checks the selected OCR pack before starting recognition. Missing files open a focused download dialog with Download and read, Not now, and manual entry. It shows download progress, retains the selected image, reports failures for retry, and resumes recognition after a successful download. Offline devices receive connection guidance; insecure HTTP previews receive HTTPS/localhost guidance.
+
+The real OCR browser scenario covers dismissing the prompt without losing the image, downloading from the prompt and reading the retained image, then offline recognition and a missing Myanmar pack. Settings remains in primary navigation and was removed from the More menu.

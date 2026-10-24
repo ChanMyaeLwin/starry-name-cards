@@ -28,7 +28,6 @@ import {
   Share2,
   QrCode,
   UserRound,
-  Settings as SettingsIcon,
   ChevronRight,
   CircleHelp,
 } from "lucide-react";
@@ -68,6 +67,7 @@ function download(
 
 export default function App() {
   const installation = useInstall();
+  const [ocrDownload, setOcrDownload] = useState(false);
   const [packInfo, setPackInfo] = useState("");
   const [preparing, setPreparing] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
@@ -122,6 +122,8 @@ export default function App() {
         setDuplicates([]);
         setImported(null);
         setCropIndex(null);
+        offlineTools.cancelPreparation();
+        setOcrDownload(false);
       }
       if (e.key === "Tab") {
         const list = elements(),
@@ -141,7 +143,7 @@ export default function App() {
       document.removeEventListener("keydown", key);
       previous?.focus();
     };
-  }, [duplicates.length, imported, cropIndex]);
+  }, [duplicates.length, imported, cropIndex, ocrDownload]);
   const fileRef = useRef<HTMLInputElement>(null),
     cameraRef = useRef<HTMLInputElement>(null),
     importRef = useRef<HTMLInputElement>(null),
@@ -328,6 +330,16 @@ export default function App() {
     cancelled.current = false;
     setMessage("");
     try {
+      const ready = await offlineTools.getOfflineStatus();
+      if (cancelled.current) return;
+      if (
+        ocrLanguage.split("+").some((lang) => !ready[lang as "eng" | "mya"])
+      ) {
+        setPackStatus("");
+        setDownloadProgress(0);
+        setOcrDownload(true);
+        return;
+      }
       const text = await recognizeImages(images, ocrLanguage, (p, s) => {
         setProgress(p);
         setStatus(s);
@@ -477,9 +489,11 @@ export default function App() {
       setPackStatus(
         "Language downloaded. You can scan with it on this device.",
       );
+      return true;
     } catch (e) {
       setOffline(false);
       setPackStatus((e as Error).message);
+      return false;
     } finally {
       setPreparing(false);
     }
@@ -1205,12 +1219,6 @@ export default function App() {
                         Icon: ShieldCheck,
                       },
                       {
-                        target: "settings",
-                        title: "Settings",
-                        description: "Language, offline access & storage",
-                        Icon: SettingsIcon,
-                      },
-                      {
                         target: "help",
                         title: "Help",
                         description: "A little guidance when you need it",
@@ -1478,6 +1486,97 @@ export default function App() {
         </span>
       </footer>
       <AppNav page={page} go={go} t={t} />
+      {ocrDownload && (
+        <div className="modal-backdrop">
+          <section
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="ocr-download-title"
+            aria-describedby="ocr-download-description"
+          >
+            <h2 id="ocr-download-title">
+              {t("Download OCR to read this card")}
+            </h2>
+            <p id="ocr-download-description">
+              {t(
+                "The selected recognition language is not downloaded yet. Download it once to read cards on this device. Your photo stays on your device.",
+              )}
+            </p>
+            <p>
+              {t("OCR recognition language")}:{" "}
+              <strong>
+                {t(
+                  ocrLanguage === "eng"
+                    ? "English"
+                    : ocrLanguage === "mya"
+                      ? "Myanmar (experimental)"
+                      : "English + Myanmar (experimental)",
+                )}
+              </strong>
+            </p>
+            <p>
+              {t(
+                "The first download is about 47 MB, plus 4.4 MB for Myanmar. Keep this screen open while it downloads.",
+              )}
+            </p>
+            {!window.isSecureContext ? (
+              <p role="alert">
+                {t(
+                  "OCR download needs HTTPS or localhost. This HTTP Wi-Fi preview cannot prepare OCR. Use HTTPS on your phone, or localhost on this computer. You can still enter details manually.",
+                )}
+              </p>
+            ) : (
+              !online && (
+                <p role="alert">
+                  {t(
+                    "Connect to the internet to download the OCR files, then try again.",
+                  )}
+                </p>
+              )
+            )}
+            {preparing && (
+              <progress
+                aria-label={t("OCR download progress")}
+                value={downloadProgress}
+                max={1}
+              />
+            )}
+            {packStatus && <p role="status">{t(packStatus)}</p>}
+            <div className="button-row">
+              <button
+                className="primary"
+                disabled={preparing || !online || !window.isSecureContext}
+                onClick={async () => {
+                  if (await prepare()) {
+                    setOcrDownload(false);
+                    await read();
+                  }
+                }}
+              >
+                {t(preparing ? "Downloading…" : "Download and read")}
+              </button>
+              <button
+                onClick={() => {
+                  offlineTools.cancelPreparation();
+                  setOcrDownload(false);
+                }}
+              >
+                {t(preparing ? "Cancel download" : "Not now")}
+              </button>
+              <button
+                disabled={preparing}
+                onClick={() => {
+                  setOcrDownload(false);
+                  setPage("edit");
+                }}
+              >
+                {t("Enter Details Manually")}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
       {duplicates.length > 0 && (
         <div className="modal-backdrop">
           <section

@@ -91,11 +91,49 @@ test("real local OCR offline and missing pack fallback", async ({
     await navigator.serviceWorker.ready;
   });
   await page.reload();
-  await page.getByRole("link", { name: "Settings", exact: true }).click();
-  await page.getByRole("button", { name: "Download for offline use" }).click();
+  await page
+    .getByRole("button", { name: "Scan a Name Card", exact: false })
+    .first()
+    .click();
+  const initialPhoto = await page.evaluate(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1000;
+    canvas.height = 300;
+    const ctx = canvas.getContext("2d")!;
+    ctx.fillStyle = "white";
+    ctx.fillRect(0, 0, 1000, 300);
+    ctx.fillStyle = "black";
+    ctx.font = "48px Arial";
+    ctx.fillText("alex@example.com", 50, 150);
+    return canvas.toDataURL("image/png").split(",")[1];
+  });
+  await page
+    .locator("input[type=file]")
+    .first()
+    .setInputFiles({
+      name: "synthetic.png",
+      mimeType: "image/png",
+      buffer: Buffer.from(initialPhoto, "base64"),
+    });
+  await page.getByRole("button", { name: "Read Card", exact: true }).click();
+  const downloadDialog = page.getByRole("dialog", {
+    name: "Download OCR to read this card",
+  });
+  await expect(downloadDialog).toBeVisible();
+  await downloadDialog.getByRole("button", { name: "Not now" }).click();
+  await expect(page.getByAltText("Front of business card")).toBeVisible();
+  await page.getByRole("button", { name: "Read Card", exact: true }).click();
+  await downloadDialog
+    .getByRole("button", { name: "Download and read" })
+    .click();
   await expect(
-    page.getByText("Language downloaded.", { exact: false }),
+    page.getByRole("heading", { name: "Check the details" }),
   ).toBeVisible({ timeout: 60000 });
+  await expect(page.getByLabel("emails 1", { exact: true })).toHaveValue(
+    "alex@example.com",
+  );
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.getByRole("link", { name: "Settings", exact: true }).click();
   await context.setOffline(true);
   await page.reload();
   await expect(
@@ -152,10 +190,12 @@ test("real local OCR offline and missing pack fallback", async ({
   await page.getByLabel("OCR recognition language").selectOption("mya");
   await page.getByRole("button", { name: "Read Card", exact: true }).click();
   await expect(
-    page.getByText(
-      "Download the selected OCR language in Settings first, or enter the details manually.",
-    ),
+    page.getByRole("dialog", { name: "Download OCR to read this card" }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Download and read" }),
+  ).toBeDisabled();
+  await page.getByRole("button", { name: "Not now", exact: true }).click();
   await page.getByLabel("OCR recognition language").selectOption("eng");
   await page.getByRole("button", { name: "Read Card", exact: true }).click();
   await page.getByRole("button", { name: "Cancel reading" }).click();

@@ -49,7 +49,7 @@ Storage is separate for each origin: localhost, the network IP and an HTTPS host
 
 ## App navigation
 
-The persistent app navigation contains **Home**, **Connections**, **Settings**, and **More**. More contains Profile, Privacy, Settings, Help and installation guidance. The optional local profile needs no account and is excluded from contact backups.
+The persistent app navigation contains **Home**, **Connections**, **Settings**, and **More**. More contains Profile, Privacy, Help and installation guidance. The optional local profile needs no account and is excluded from contact backups.
 
 Each screen has a distinct URL: `/#/home`, `/#/connections`, `/#/settings`, `/#/more`, `/#/profile`, `/#/privacy`, `/#/help`, `/#/scan` and `/#/review`. Saved connections use `/#/connections/<local-id>`. Hash routes support direct opening, reloads and browser back/forward without static-host rewrite rules, including under a subdirectory and offline. URLs never contain contact details. Unsaved review drafts are not restored after a reload.
 

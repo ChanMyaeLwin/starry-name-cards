@@ -278,3 +278,10 @@ Object.assign(translations, {
   "Open your connections with one tap, like any other app.":
     "အခြားအက်ပ်များကဲ့သို့ တစ်ချက်နှိပ်ရုံဖြင့် အဆက်အသွယ်များကို ဖွင့်ပါ။",
 });
+
+Object.assign(translations, {
+  "Download OCR to read this card": "ဤကတ်ကို ဖတ်ရန် OCR ဒေါင်းလုဒ်လုပ်ပါ",
+  "Download and read": "ဒေါင်းလုဒ်လုပ်ပြီး ဖတ်ရန်",
+  "Not now": "ယခု မလုပ်သေးပါ",
+  "Downloading…": "ဒေါင်းလုဒ်လုပ်နေသည်…",
+});
