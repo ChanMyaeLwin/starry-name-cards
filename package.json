@@ -27,7 +27,7 @@
   "license": "MIT",
   "dependencies": {
     "dexie": "4.4.7",
-    "lucide-react": "1.61.0",
+    "lucide-react": "1.68.0",
     "qrcode": "1.5.4",
     "react": "19.3.1",
     "react-dom": "19.3.1",
